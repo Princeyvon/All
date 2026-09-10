@@ -1,23 +1,47 @@
-export type RelationshipGoal = { id: string | number; text: string; done: boolean };
-export type RelationshipActivity = { id: string | number; date: string; type: string; text: string };
-export type RelationshipPerson = { goals?: RelationshipGoal[]; activity?: RelationshipActivity[] };
-
-export function withRelationshipActivity(person: RelationshipPerson, entry: RelationshipActivity) {
-  return { ...person, activity: [entry, ...(person.activity || [])] };
+export function addRelationshipGoal(person: any, goal: any, log?: any) {
+  if (!person) return person;
+  const nextGoals = [...(person.goals || []), goal];
+  const nextLogs = log ? [log, ...(person.logs || [])] : (person.logs || []);
+  return {
+    ...person,
+    goals: nextGoals,
+    logs: nextLogs,
+  };
 }
 
-export function addRelationshipGoal(person: RelationshipPerson, goal: RelationshipGoal, activity: RelationshipActivity) {
-  return withRelationshipActivity({ ...person, goals: [...(person.goals || []), goal] }, activity);
+export function editRelationshipGoal(person: any, goalId: string | number, text: string, log?: any) {
+  if (!person) return person;
+  const nextGoals = (person.goals || []).map((g: any) =>
+    g.id === goalId ? { ...g, text } : g
+  );
+  const nextLogs = log ? [log, ...(person.logs || [])] : (person.logs || []);
+  return {
+    ...person,
+    goals: nextGoals,
+    logs: nextLogs,
+  };
 }
 
-export function editRelationshipGoal(person: RelationshipPerson, goalId: string | number, text: string, activity: RelationshipActivity) {
-  return withRelationshipActivity({ ...person, goals: (person.goals || []).map((goal) => goal.id === goalId ? { ...goal, text } : goal) }, activity);
+export function toggleRelationshipGoal(person: any, goalId: string | number, log?: any) {
+  if (!person) return person;
+  const nextGoals = (person.goals || []).map((g: any) =>
+    g.id === goalId ? { ...g, done: !g.done } : g
+  );
+  const nextLogs = log ? [log, ...(person.logs || [])] : (person.logs || []);
+  return {
+    ...person,
+    goals: nextGoals,
+    logs: nextLogs,
+  };
 }
 
-export function toggleRelationshipGoal(person: RelationshipPerson, goalId: string | number, activity: RelationshipActivity) {
-  return withRelationshipActivity({ ...person, goals: (person.goals || []).map((goal) => goal.id === goalId ? { ...goal, done: !goal.done } : goal) }, activity);
-}
-
-export function deleteRelationshipGoal(person: RelationshipPerson, goalId: string | number, activity: RelationshipActivity) {
-  return withRelationshipActivity({ ...person, goals: (person.goals || []).filter((goal) => goal.id !== goalId) }, activity);
+export function deleteRelationshipGoal(person: any, goalId: string | number, log?: any) {
+  if (!person) return person;
+  const nextGoals = (person.goals || []).filter((g: any) => g.id !== goalId);
+  const nextLogs = log ? [log, ...(person.logs || [])] : (person.logs || []);
+  return {
+    ...person,
+    goals: nextGoals,
+    logs: nextLogs,
+  };
 }

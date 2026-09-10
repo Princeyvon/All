@@ -159,8 +159,8 @@ function rangeFor(cursor, view) {
 
 function EventPill({ event, onClick }) {
   return (
-    <button type="button" onClick={() => onClick(event)} className={`w-full text-left truncate rounded-md px-2 py-1 text-[11px] transition-transform duration-150 active:scale-[0.98] ${event.source === "google" ? "bg-blue-50 text-blue-700" : event.healthSchedule ? "bg-lime-100 text-lime-900" : event.derived ? "bg-neutral-100 text-neutral-600" : "bg-lime-50 text-lime-800"}`}>
-      <span className="font-medium">{event.allDay ? "" : `${eventTime(event)} · `}</span>{event.title}
+    <button type="button" onClick={() => onClick(event)} className={`w-full text-left truncate rounded-lg px-2.5 py-1 text-xs font-medium transition-transform duration-150 active:scale-[0.98] ${event.source === "google" ? "bg-blue-50 text-blue-700 border border-blue-200/50" : event.healthSchedule ? "bg-emerald-50 text-emerald-800 border border-emerald-200/50" : event.derived ? "bg-neutral-100 text-neutral-700 border border-neutral-200/50" : "bg-lime-50 text-lime-900 border border-lime-200/50"}`}>
+      <span className="font-semibold">{event.allDay ? "" : `${eventTime(event)} · `}</span>{event.title}
     </button>
   );
 }
@@ -209,17 +209,17 @@ export default function CalendarWorkspace({ todos, assignments, syllabusEvents, 
 
   return (
     <div className="calendar-workspace flex flex-col gap-5">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-3">
-          <button type="button" aria-label="Previous period" onClick={() => go(-1)} className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-neutral-500 transition-transform duration-150 active:scale-[0.97]"><ChevronLeft size={16} /></button>
-          <button type="button" onClick={() => setCursor(new Date())} className="rounded-full bg-white px-4 py-2 text-xs font-medium text-neutral-700 transition-transform duration-150 active:scale-[0.97]">Today</button>
-          <button type="button" aria-label="Next period" onClick={() => go(1)} className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-neutral-500 transition-transform duration-150 active:scale-[0.97]"><ChevronRight size={16} /></button>
-          <h2 className="ml-1 text-base font-semibold text-neutral-900">{title}</h2>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button type="button" aria-label="Previous period" onClick={() => go(-1)} className="w-9 h-9 rounded-xl bg-white border border-neutral-200/70 shadow-sm flex items-center justify-center text-neutral-600 hover:text-neutral-950 transition-all active:scale-[0.97]"><ChevronLeft size={16} /></button>
+          <button type="button" onClick={() => setCursor(new Date())} className="rounded-xl bg-white border border-neutral-200/70 shadow-sm px-3.5 py-2 text-xs font-semibold text-neutral-800 hover:bg-neutral-50 transition-all active:scale-[0.97]">Today</button>
+          <button type="button" aria-label="Next period" onClick={() => go(1)} className="w-9 h-9 rounded-xl bg-white border border-neutral-200/70 shadow-sm flex items-center justify-center text-neutral-600 hover:text-neutral-950 transition-all active:scale-[0.97]"><ChevronRight size={16} /></button>
+          <h2 className="ml-1 text-sm sm:text-base font-bold text-neutral-900 tracking-tight">{title}</h2>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 rounded-full bg-neutral-100 p-1">{views.map((item) => <button key={item} type="button" onClick={() => setView(item)} className={`rounded-full px-3 py-1.5 text-xs font-medium capitalize ${view === item ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500"}`}>{item}</button>)}</div>
-          <button type="button" onClick={() => onIdeas?.("Calendar planning", JSON.stringify({ events: visibleEvents.slice(0, 30), view }))} className="inline-flex items-center gap-1 rounded-lg bg-neutral-100 px-2.5 py-1.5 text-[11px] font-medium text-neutral-600 transition-transform duration-150 active:scale-[0.97]"><Sparkles size={12} /> Ideas</button>
-          <button type="button" onClick={() => openCreate(cursor)} className="inline-flex items-center gap-1 rounded-lg bg-lime-400 px-3 py-2 text-xs font-medium text-neutral-950 transition-transform duration-150 active:scale-[0.97]"><Plus size={14} /> New event</button>
+          <div className="flex items-center gap-1 rounded-xl bg-neutral-100/90 p-1 border border-neutral-200/50">{views.map((item) => <button key={item} type="button" onClick={() => setView(item)} className={`min-h-[32px] rounded-lg px-3 py-1 text-xs font-semibold capitalize transition-all duration-200 ${view === item ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-800"}`}>{item}</button>)}</div>
+          <button type="button" onClick={() => onIdeas?.("Calendar planning", JSON.stringify({ events: visibleEvents.slice(0, 30), view }))} className="inline-flex items-center gap-1 rounded-xl bg-white border border-neutral-200/70 shadow-sm px-3 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 transition-transform active:scale-[0.97]"><Sparkles size={13} /> Ideas</button>
+          <button type="button" onClick={() => openCreate(cursor)} className="inline-flex items-center gap-1 rounded-xl bg-neutral-950 text-white px-3.5 py-2 text-xs font-semibold shadow-sm hover:bg-neutral-900 transition-transform active:scale-[0.97]"><Plus size={14} /> New event</button>
         </div>
       </div>
 

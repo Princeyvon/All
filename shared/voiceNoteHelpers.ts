@@ -1,28 +1,14 @@
-export type VoiceDraftState = {
-  text: string;
-  audioPreview: { url: string; meta: Record<string, unknown> } | null;
-  status: "idle" | "ready" | "needs-text";
-  error: string;
-};
-
-export function buildVoiceFailureState(
-  stage: "upload" | "transcription",
-  error: unknown,
-  draft: Pick<VoiceDraftState, "text" | "audioPreview">,
-): VoiceDraftState {
-  const fallback = stage === "upload"
-    ? "The recording could not be uploaded. You can still use the live transcript."
-    : "Audio was saved, but transcription was unavailable. You can type the note instead.";
-  const message = error instanceof Error && error.message ? error.message : fallback;
-
+export function buildVoiceFailureState(stage: string, error: any, draft: { text: string; audioPreview: any }) {
   return {
-    text: draft.text,
-    audioPreview: draft.audioPreview,
-    status: draft.text.trim() ? "ready" : "needs-text",
-    error: message,
+    failed: true,
+    stage,
+    error: error?.message || String(error || "Processing failed"),
+    text: draft.text || "",
+    audioPreview: draft.audioPreview || null,
   };
 }
 
-export function canSubmitVoiceDraft(text: string, busy: boolean): boolean {
-  return Boolean(text.trim()) && !busy;
+export function canSubmitVoiceDraft(value: string, isBusy: boolean) {
+  if (isBusy) return false;
+  return Boolean((value || "").trim());
 }

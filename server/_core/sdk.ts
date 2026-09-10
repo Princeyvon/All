@@ -155,7 +155,7 @@ class SDKServer {
   }
 
   private getSessionSecret() {
-    const secret = ENV.cookieSecret;
+    const secret = ENV.cookieSecret || "development-dashboard-secret-32-chars-fallback";
     return new TextEncoder().encode(secret);
   }
 

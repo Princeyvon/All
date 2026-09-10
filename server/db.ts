@@ -18,6 +18,9 @@ export async function getDb() {
   return _db;
 }
 
+const inMemoryUsers = new Map<string, any>();
+const inMemorySnapshots = new Map<number, { id: number; userId: number; snapshot: string; createdAt: Date; updatedAt: Date }>();
+
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) {
     throw new Error("User openId is required for upsert");
@@ -25,7 +28,23 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
+    const existing = inMemoryUsers.get(user.openId) || {
+      id: 1,
+      openId: user.openId,
+      name: user.name || "Personal Life Dashboard",
+      email: user.email || null,
+      loginMethod: user.loginMethod || "pin",
+      role: user.role || "admin",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lastSignedIn: new Date(),
+    };
+    if (user.name) existing.name = user.name;
+    if (user.email) existing.email = user.email;
+    if (user.role) existing.role = user.role;
+    existing.lastSignedIn = user.lastSignedIn || new Date();
+    existing.updatedAt = new Date();
+    inMemoryUsers.set(user.openId, existing);
     return;
   }
 
@@ -94,8 +113,7 @@ export async function getPrimaryUser() {
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return undefined;
+    return inMemoryUsers.get(openId);
   }
 
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
@@ -105,14 +123,31 @@ export async function getUserByOpenId(openId: string) {
 
 export async function getDashboardSnapshot(userId: number) {
   const db = await getDb();
-  if (!db) return undefined;
+  if (!db) {
+    return inMemorySnapshots.get(userId);
+  }
   const result = await db.select().from(dashboardSnapshots).where(eq(dashboardSnapshots.userId, userId)).limit(1);
   return result[0];
 }
 
 export async function saveDashboardSnapshot(userId: number, snapshot: string) {
   const db = await getDb();
-  if (!db) throw new Error("Database unavailable");
+  if (!db) {
+    const existing = inMemorySnapshots.get(userId);
+    if (existing) {
+      existing.snapshot = snapshot;
+      existing.updatedAt = new Date();
+    } else {
+      inMemorySnapshots.set(userId, {
+        id: 1,
+        userId,
+        snapshot,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+    }
+    return;
+  }
   const existing = await getDashboardSnapshot(userId);
   if (existing) {
     await db.update(dashboardSnapshots).set({ snapshot, updatedAt: new Date() }).where(eq(dashboardSnapshots.userId, userId));

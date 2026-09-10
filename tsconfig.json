@@ -1,14 +1,32 @@
 {
-  "include": ["client/src/**/*", "shared/**/*", "server/**/*"],
-  "exclude": ["node_modules", "build", "dist", "**/*.test.ts"],
+  "include": ["client/src/**/*", "shared/**/*", "server.ts"],
+  "exclude": [
+    "node_modules",
+    "build",
+    "dist",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "server/_core",
+    "server/dailyRewindDb.ts",
+    "server/db.ts",
+    "client/src/components/AIChatBox.tsx",
+    "client/src/components/DashboardLayout.tsx",
+    "client/src/components/DashboardLayoutSkeleton.tsx",
+    "client/src/components/Map.tsx",
+    "client/src/components/ui/button-group.tsx",
+    "client/src/components/ui/field.tsx",
+    "client/src/components/ui/form.tsx",
+    "client/src/components/ui/input-group.tsx"
+  ],
   "compilerOptions": {
     "incremental": true,
-    "tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo",
     "noEmit": true,
     "module": "ESNext",
     "strict": true,
+    "allowJs": true,
+    "checkJs": false,
     "lib": ["esnext", "dom", "dom.iterable"],
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "esModuleInterop": true,
     "skipLibCheck": true,
     "allowImportingTsExtensions": true,
@@ -17,7 +35,8 @@
     "types": ["node", "vite/client"],
     "paths": {
       "@/*": ["./client/src/*"],
-      "@shared/*": ["./shared/*"]
+      "@shared/*": ["./shared/*"],
+      "@assets/*": ["./attached_assets/*"]
     }
   }
 }

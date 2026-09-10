@@ -4,6 +4,10 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import CalendarWorkspace from "@/components/CalendarWorkspace";
 import PinGate from "@/components/PinGate";
+import { WorkoutsHub } from "@/components/WorkoutsHub";
+import { GeorgetownSubpage, DEFAULT_GEORGETOWN_ITEMS } from "@/components/GeorgetownSubpage";
+import { EisenhowerMatrix } from "@/components/EisenhowerMatrix";
+import { VoiceAssistantDropdown } from "@/components/VoiceAssistantDropdown";
 import { applyIncomeReceipt, addIncomeExpected, applyDebtPayment, addDebtPrincipal, appendVoiceNote, buildFinanceInsights, applyVoiceActionToState, filterTodosForProject, calculateCompletionPercent, buildTodayCardItems, getDebtActionMeta } from "@shared/interactionHelpers";
 import { addRelationshipGoal, editRelationshipGoal, toggleRelationshipGoal, deleteRelationshipGoal } from "@shared/relationshipHelpers";
 import { buildVoiceFailureState, canSubmitVoiceDraft } from "@shared/voiceNoteHelpers";
@@ -103,16 +107,16 @@ function fmt(n) {
 function StatCard({ icon: Icon, iconColor, label, value, delta, positive }) {
   const c = colorMap[iconColor];
   return (
-    <div className="dashboard-card bg-white rounded-[1.35rem] p-5 flex-1 min-w-[150px]">
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-sm text-neutral-500">{label}</span>
-        <div className={`w-8 h-8 rounded-full ${c.badgeBg} flex items-center justify-center`}>
+    <div className="dashboard-card bg-white rounded-2xl p-4 sm:p-5 flex-1 min-w-[140px] border border-neutral-100/80 shadow-sm transition-all duration-200">
+      <div className="flex items-center justify-between mb-3 sm:mb-4">
+        <span className="text-xs sm:text-sm font-medium text-neutral-500">{label}</span>
+        <div className={`w-8 h-8 rounded-xl ${c.badgeBg} flex items-center justify-center shrink-0`}>
           <Icon size={16} className={c.badgeText} />
         </div>
       </div>
-      <div className="text-2xl font-semibold text-neutral-900 tracking-tight">{value}</div>
+      <div className="text-xl sm:text-2xl font-bold text-neutral-900 tracking-tight tabular-nums font-mono">{value}</div>
       {delta && (
-        <div className={`flex items-center gap-1 text-xs mt-2 ${positive ? "text-emerald-500" : "text-rose-500"}`}>
+        <div className={`flex items-center gap-1 text-xs mt-2 font-medium ${positive ? "text-emerald-600" : "text-rose-600"}`}>
           {positive ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
           <span>{delta}</span>
         </div>
@@ -123,22 +127,22 @@ function StatCard({ icon: Icon, iconColor, label, value, delta, positive }) {
 
 function StatusPill({ status }) {
   const styles = {
-    Pending: "bg-amber-50 text-amber-600",
-    Received: "bg-emerald-50 text-emerald-600",
-    Active: "bg-blue-50 text-blue-600",
-    Paid: "bg-emerald-50 text-emerald-600",
-    "Not Started": "bg-neutral-100 text-neutral-500",
-    "In Progress": "bg-blue-50 text-blue-600",
-    Blocked: "bg-rose-50 text-rose-600",
-    Done: "bg-emerald-50 text-emerald-600",
-    Submitted: "bg-blue-50 text-blue-600",
-    Graded: "bg-emerald-50 text-emerald-600",
-    "Not Asked": "bg-neutral-100 text-neutral-500",
-    Asked: "bg-amber-50 text-amber-600",
-    Confirmed: "bg-blue-50 text-blue-600",
+    Pending: "bg-amber-50 text-amber-700 border-amber-200/50",
+    Received: "bg-emerald-50 text-emerald-700 border-emerald-200/50",
+    Active: "bg-blue-50 text-blue-700 border-blue-200/50",
+    Paid: "bg-emerald-50 text-emerald-700 border-emerald-200/50",
+    "Not Started": "bg-neutral-100 text-neutral-600 border-neutral-200/50",
+    "In Progress": "bg-blue-50 text-blue-700 border-blue-200/50",
+    Blocked: "bg-rose-50 text-rose-700 border-rose-200/50",
+    Done: "bg-emerald-50 text-emerald-700 border-emerald-200/50",
+    Submitted: "bg-blue-50 text-blue-700 border-blue-200/50",
+    Graded: "bg-emerald-50 text-emerald-700 border-emerald-200/50",
+    "Not Asked": "bg-neutral-100 text-neutral-600 border-neutral-200/50",
+    Asked: "bg-amber-50 text-amber-700 border-amber-200/50",
+    Confirmed: "bg-blue-50 text-blue-700 border-blue-200/50",
   };
   return (
-    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${styles[status] || "bg-neutral-100 text-neutral-500"}`}>
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap border ${styles[status] || "bg-neutral-100 text-neutral-600 border-neutral-200/50"}`}>
       {status}
     </span>
   );
@@ -150,27 +154,27 @@ function ScoreRing({ label, score, colorKey }) {
   const circ = 2 * Math.PI * r;
   const offset = circ - (score / 100) * circ;
   return (
-    <div className="flex flex-col items-center gap-2">
-      <svg width="64" height="64" viewBox="0 0 64 64">
+    <div className="flex flex-col items-center gap-1.5">
+      <svg width="60" height="60" viewBox="0 0 64 64" className="shrink-0">
         <circle cx="32" cy="32" r={r} stroke="#F1F1EF" strokeWidth="6" fill="none" />
         <circle
           cx="32" cy="32" r={r} stroke={c.ring} strokeWidth="6" fill="none"
           strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
           transform="rotate(-90 32 32)"
         />
-        <text x="32" y="37" textAnchor="middle" fontSize="14" fontWeight="600" fill="#171717">{Math.round(score)}</text>
+        <text x="32" y="37" textAnchor="middle" fontSize="14" fontWeight="700" fill="#11120F" className="font-mono">{Math.round(score)}</text>
       </svg>
-      <span className="text-xs text-neutral-500 text-center">{label}</span>
+      {label && <span className="text-[11px] font-medium text-neutral-500 text-center tracking-tight">{label}</span>}
     </div>
   );
 }
 
 function SectionCard({ title, right, children }) {
   return (
-    <section className="dashboard-card bg-white rounded-[1.35rem] p-5">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-base font-semibold text-neutral-900">{title}</h3>
-        {right}
+    <section className="dashboard-card bg-white rounded-2xl p-4 sm:p-6 border border-neutral-100/80 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4 sm:mb-5">
+        <h3 className="text-sm sm:text-base font-bold text-neutral-900 tracking-tight">{title}</h3>
+        {right && <div className="flex items-center gap-2 shrink-0">{right}</div>}
       </div>
       {children}
     </section>
@@ -277,13 +281,13 @@ function IdeaButton({ onClick, loading = false }) {
 
 function ViewTabs({ views, active, onChange }) {
   return (
-    <div className="flex items-center gap-1 bg-neutral-100 rounded-full p-1">
+    <div className="inline-flex items-center gap-1 bg-neutral-100/90 p-1 rounded-xl border border-neutral-200/50">
       {views.map((v) => (
         <button
           key={v}
           onClick={() => onChange(v)}
-          className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
-            active === v ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500"
+          className={`min-h-[32px] px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 ${
+            active === v ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-800"
           }`}
         >
           {v}
@@ -295,13 +299,13 @@ function ViewTabs({ views, active, onChange }) {
 
 function SubTabs({ tabs, active, onChange }) {
   return (
-    <div className="dashboard-tabbar flex gap-2 flex-wrap rounded-full">
+    <div className="dashboard-tabbar flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 rounded-2xl">
       {tabs.map((t) => (
         <button
           key={t.key}
           onClick={() => onChange(t.key)}
-          className={`px-4 py-2 rounded-full text-sm font-medium transition ${
-            active === t.key ? "bg-neutral-950 text-white" : "bg-white text-neutral-600"
+          className={`min-h-[38px] sm:min-h-[36px] px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
+            active === t.key ? "bg-neutral-950 text-white shadow-sm" : "bg-white/80 hover:bg-white text-neutral-600 border border-neutral-200/60"
           }`}
         >
           {t.label}
@@ -604,39 +608,37 @@ export const VoiceNoteBox = forwardRef(function VoiceNoteBox({ onSubmit, loading
 });
 
 function MobileDock({ items, active, onChange, onVoice, voiceRecording }) {
-  const activeIndex = Math.max(0, items.findIndex((i) => i.key === active));
-  const leftPct = ((activeIndex + 0.5) / items.length) * 100;
-  const ActiveIcon = items[activeIndex]?.icon;
-  const activeLabel = domainMeta[active]?.label || "Home";
+  const activeLabel = items.find((i) => i.key === active)?.label || domainMeta[active]?.label || "Home";
 
   return (
-    <div className="mobile-dock-shell md:hidden fixed left-0 right-0 bottom-5 flex flex-col items-center gap-3 px-5 z-20">
-      <style>{`
-        @keyframes dockPopScale { 0%{transform:scale(.72);} 55%{transform:scale(1.08);} 100%{transform:scale(1);} }
-        .dock-pop-inner { animation: dockPopScale .42s cubic-bezier(.32,.72,0,1); }
-        @media (prefers-reduced-motion: reduce) { .dock-pop-inner { animation: none; } }
-      `}</style>
-
+    <div className="mobile-dock-root md:hidden">
+      {/* Floating Voice Log FAB */}
       {onVoice && (
         <button
           type="button"
           className={`mobile-voice-fab ${voiceRecording ? "is-recording" : ""}`}
           onClick={onVoice}
-          aria-label={voiceRecording ? "Pause voice recording" : "Tap to speak"}
+          aria-label={voiceRecording ? "Pause voice recording" : "Record voice update"}
           aria-pressed={voiceRecording}
         >
-          <span className="mobile-voice-fab-icon" aria-hidden="true">{voiceRecording ? <Pause size={20} strokeWidth={2.3} /> : <Mic size={21} strokeWidth={2} />}</span>
-          <span className="sr-only">{voiceRecording ? "Recording. Tap to pause." : "Tap to speak."}</span>
+          <span className="mobile-voice-fab-icon" aria-hidden="true">
+            {voiceRecording ? <Pause size={19} strokeWidth={2.5} /> : <Mic size={19} strokeWidth={2} />}
+          </span>
+          <span className="sr-only">{voiceRecording ? "Recording active. Tap to pause." : "Tap to speak a dashboard note or update."}</span>
         </button>
       )}
-      <div className="mobile-dock-bar relative w-full max-w-[360px]" style={{ height: 64 }}>
-        <div className="mobile-dock-backdrop absolute inset-0" aria-hidden="true" />
 
-        <nav className="mobile-dock-items absolute inset-0 flex" aria-label="Dashboard sections">
+      {/* Sleek, Modern Mobile Bottom Navigation Bar */}
+      <nav
+        className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-40"
+        aria-label="Dashboard mobile navigation"
+      >
+        <div className="flex items-center justify-around px-1 pt-1 pb-[max(0.45rem,env(safe-area-inset-bottom))] max-w-lg mx-auto">
           {items.map((it) => {
             const isActive = it.key === active;
             const Icon = it.icon;
-            const label = domainMeta[it.key]?.label || "Home";
+            const label = it.label || (it.key === "relationships" ? "People" : domainMeta[it.key]?.label || it.key);
+
             return (
               <button
                 key={it.key}
@@ -644,29 +646,36 @@ function MobileDock({ items, active, onChange, onVoice, voiceRecording }) {
                 onClick={() => onChange(it.key)}
                 aria-label={label}
                 aria-current={isActive ? "page" : undefined}
-                title={label}
-                className={`mobile-dock-button flex-1 flex items-center justify-center bg-transparent border-0 ${isActive ? "is-active" : ""}`}
+                className={`mobile-nav-btn flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-xl min-w-0 transition-all duration-150 ${
+                  isActive ? "text-[#11120f]" : "text-[#687168] hover:text-[#11120f]"
+                }`}
               >
-                <Icon size={19} aria-hidden="true" />
+                <div
+                  className={`relative flex items-center justify-center w-8 h-7 rounded-lg transition-all duration-150 ${
+                    isActive ? "bg-stone-200/60 text-[#11120f]" : "text-[#687168]"
+                  }`}
+                >
+                  <Icon size={18} strokeWidth={isActive ? 2.3 : 1.75} aria-hidden="true" />
+                  {isActive && (
+                    <span
+                      className="absolute -top-0.5 w-1.5 h-1.5 rounded-full bg-[#2f745c]"
+                      aria-hidden="true"
+                    />
+                  )}
+                </div>
+                <span
+                  className={`text-[10px] leading-tight tracking-tight mt-0.5 truncate w-full text-center ${
+                    isActive ? "font-semibold text-[#11120f]" : "font-medium text-[#687168]"
+                  }`}
+                >
+                  {label}
+                </span>
               </button>
             );
           })}
-        </nav>
-
-        {ActiveIcon && (
-          <div
-            className="mobile-dock-active"
-            style={{ "--dock-progress": `${leftPct}%` }}
-            aria-hidden="true"
-          >
-            <div key={active} className="dock-pop-inner">
-              <ActiveIcon size={20} />
-              <span className="dock-active-signal" />
-            </div>
-          </div>
-        )}
-        <span className="sr-only" aria-live="polite">Current section: {activeLabel}</span>
-      </div>
+        </div>
+      </nav>
+      <span className="sr-only" aria-live="polite">Current section: {activeLabel}</span>
     </div>
   );
 }
@@ -860,22 +869,26 @@ export default function PersonalLifeOS() {
     return { target: todo.domain || "home", sub: todo.domain ? undefined : "upcoming" };
   }
 
-  // Todos & reminders (freeform, not tied to a specific tracker record)
+  // Todos & reminders (Eisenhower Matrix + Priorities)
   const [todos, setTodos] = useState([
-    { id: 1, text: "Pay Pig Sales invoice", due: "2026-08-30", time: "", domain: "finance", done: false },
-    { id: 2, text: "Call Nicole back", due: "2026-08-29", time: "18:00", domain: "relationships", done: false },
-    { id: 3, text: "Pick up prescription refill", due: "2026-08-29", time: "09:00", domain: "health", done: false },
-    { id: 4, text: "Renew gym membership", due: "2026-09-03", time: "", domain: "", done: true },
-    { id: 5, text: "Build hero section — Flame Guard site", due: "2026-09-02", time: "", domain: "work", done: false, taskId: 1, projectId: 1 },
-    { id: 6, text: "Wire contact form — Flame Guard site", due: "2026-09-05", time: "", domain: "work", done: false, taskId: 2, projectId: 1 },
-    { id: 7, text: "Client billing module — Agency OS", due: "2026-08-20", time: "", domain: "work", done: false, taskId: 3, projectId: 2 },
-    { id: 8, text: "Define the next rug mosaic deliverable", due: "2026-09-01", time: "", domain: "work", done: false, projectId: 3 },
+    { id: 1, text: "Bank Runs Case Study 1 — Liquidity & Run Simulation", due: "2026-09-08", time: "23:59", domain: "georgetown", done: false, quadrant: "Q1", priority: "P1" },
+    { id: 2, text: "Pay Pig Sales invoice", due: "2026-08-30", time: "", domain: "finance", done: false, quadrant: "Q1", priority: "P1" },
+    { id: 3, text: "Georgetown Econ Growth Models deep reading (Ch. 4)", due: "2026-09-10", time: "14:00", domain: "georgetown", done: false, quadrant: "Q2", priority: "P2" },
+    { id: 4, text: "Strength Progression: Heavy Squat & Bench press session", due: "2026-09-08", time: "17:00", domain: "health", done: false, quadrant: "Q2", priority: "P2" },
+    { id: 5, text: "Define the next rug mosaic deliverable", due: "2026-09-01", time: "", domain: "work", done: false, quadrant: "Q2", priority: "P2", projectId: 3 },
+    { id: 6, text: "Call Nicole back & catch up", due: "2026-08-29", time: "18:00", domain: "relationships", done: false, quadrant: "Q2", priority: "P2" },
+    { id: 7, text: "Pick up prescription refill", due: "2026-08-29", time: "09:00", domain: "health", done: false, quadrant: "Q3", priority: "P3" },
+    { id: 8, text: "Quick email to TA about Georgetown office hours", due: "2026-09-08", time: "15:30", domain: "georgetown", done: false, quadrant: "Q3", priority: "P3" },
+    { id: 9, text: "Someday: Explore econometrics STATA scripts for backlog", due: "2026-09-20", time: "", domain: "georgetown", done: false, quadrant: "Q4", priority: "P4" },
+    { id: 10, text: "Renew gym membership", due: "2026-09-03", time: "", domain: "health", done: true, quadrant: "Q3", priority: "P3" },
   ]);
-  const [newTodo, setNewTodo] = useState({ text: "", due: "", time: "", domain: "" });
+  const [newTodo, setNewTodo] = useState({ text: "", due: "", time: "", domain: "", quadrant: "Q2", priority: "P2" });
   function addTodo() {
     if (!newTodo.text) return;
-    setTodos([...todos, { id: Date.now(), ...newTodo, done: false }]);
-    setNewTodo({ text: "", due: "", time: "", domain: "" });
+    const q = newTodo.quadrant || "Q2";
+    const p = newTodo.priority || (q === "Q1" ? "P1" : q === "Q2" ? "P2" : q === "Q3" ? "P3" : "P4");
+    setTodos([...todos, { id: Date.now(), ...newTodo, quadrant: q, priority: p, done: false }]);
+    setNewTodo({ text: "", due: "", time: "", domain: "", quadrant: "Q2", priority: "P2" });
   }
   const [newTodayItem, setNewTodayItem] = useState({ text: "", time: "" });
   function addTodayItem() {
@@ -1143,22 +1156,21 @@ export default function PersonalLifeOS() {
     setAiInput("");
     setAiLoading(true);
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const response = await fetch("/api/health-ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 1000,
-          system: `You are a supportive health-habit assistant inside a personal dashboard app. The user will describe a symptom or condition (e.g. "I got the flu"). Respond ONLY with a raw JSON object — no markdown fences, no preamble, no extra text — in exactly this shape:
-{"diseaseName":"short name of the condition","summary":"one or two short, encouraging, plain-language sentences of practical advice","habits":["short imperative habit 1","short imperative habit 2"],"clinicVisit":true or false,"medication":{"name":"generic OTC name or empty string","times":["HH:MM","HH:MM"]}}
-Keep habits to 2-4 short, concrete, temporary actions (e.g. "Drink plenty of water", "Rest this afternoon"). Only set clinicVisit true if the condition plausibly warrants seeing a doctor. Only fill medication with a common generic over-the-counter suggestion and reminder times — never a prescription-only drug or a specific dosage. If nothing medication-related applies, return medication as null.`,
+          userText,
           messages: [{ role: "user", content: userText }],
         }),
       });
       const data = await response.json();
-      const raw = (data.content || []).map((b) => b.text || "").join("");
-      const clean = raw.replace(/```json|```/g, "").trim();
-      const parsed = JSON.parse(clean);
+      let parsed = data;
+      if (!data.diseaseName && data.content) {
+        const raw = (data.content || []).map((b) => b.text || "").join("");
+        const clean = raw.replace(/```json|```/g, "").trim();
+        parsed = JSON.parse(clean);
+      }
 
       setDiseases((prev) => {
         const exists = prev.some((d) => d.name.toLowerCase() === (parsed.diseaseName || "").toLowerCase());
@@ -1239,15 +1251,10 @@ Keep habits to 2-4 short, concrete, temporary actions (e.g. "Drink plenty of wat
 
   // School
   const [assignments, setAssignments] = useState([
-    { id: 1, title: "Essay 3", course: "Econ 201", due: "2026-09-01", status: "In Progress", grade: null, program: "Georgetown" },
-    { id: 2, title: "Problem Set 4", course: "Calc II", due: "2026-08-30", status: "Not Started", grade: null, program: "Georgetown" },
-    { id: 3, title: "Lab Report", course: "Chem 101", due: "2026-08-20", status: "Graded", grade: "A-", program: "Georgetown" },
     { id: 4, title: "Thesis outline", course: "Research Seminar", due: "2026-09-05", status: "In Progress", grade: null, program: "Masters" },
     { id: 5, title: "Case study response", course: "Strategy", due: "2026-08-22", status: "Graded", grade: "A", program: "Masters" },
   ]);
   const [readings, setReadings] = useState([
-    { id: 1, title: "Ch. 6 — Supply & Demand", course: "Econ 201", done: true, program: "Georgetown" },
-    { id: 2, title: "Ch. 4 — Derivatives", course: "Calc II", done: false, program: "Georgetown" },
     { id: 3, title: "Lit review — Ch. 2", course: "Research Seminar", done: false, program: "Masters" },
   ]);
   const schoolAssignments = assignments.filter((a) => a.program === schoolSub);
@@ -1279,7 +1286,7 @@ Keep habits to 2-4 short, concrete, temporary actions (e.g. "Drink plenty of wat
   const [georgetownAvailability, setGeorgetownAvailability] = useState(georgetownAvailabilityDefaults);
   const [selectedCourseId, setSelectedCourseId] = useState(georgetownClassDefaults[0].id);
   const [newClass, setNewClass] = useState({ name: "", professor: "", schedule: "" });
-  const [courseItems, setCourseItems] = useState([]);
+  const [courseItems, setCourseItems] = useState(() => (Array.isArray(DEFAULT_GEORGETOWN_ITEMS) && DEFAULT_GEORGETOWN_ITEMS.length > 0 ? DEFAULT_GEORGETOWN_ITEMS : []));
   const [coursePerformance, setCoursePerformance] = useState([]);
   const coursePageCourse = courseRouteId ? classes.find((item) => String(item.id) === String(courseRouteId)) || null : null;
   const [courseDraft, setCourseDraft] = useState({ type: "Assignment", title: "", date: "", time: "", notes: "" });
@@ -1519,15 +1526,11 @@ Keep habits to 2-4 short, concrete, temporary actions (e.g. "Drink plenty of wat
     if (!person) return;
     setTalkingPointsLoading((prev) => ({ ...prev, [personId]: true }));
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const response = await fetch("/api/talking-points", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 500,
-          system: `You help someone prepare for a catch-up conversation with a person in their life. Respond ONLY with a raw JSON object, no markdown fences, no preamble, in exactly this shape:
-{"points":["short conversation starter 1","short conversation starter 2","short conversation starter 3"]}
-Keep each point to one short, warm, specific sentence or question. Ground them in the goals and notes provided when relevant; otherwise suggest natural, caring check-in questions appropriate for the relationship type and how long it's been since they last talked.`,
+          person,
           messages: [{
             role: "user",
             content: `Name: ${person.name}\nRelationship: ${person.type}\nDays since last contact: ${daysSince(person.lastContacted)}\nGoals with them: ${(person.goals || []).map((g) => g.text).join("; ") || "none noted"}\nNotes: ${person.notes || "none"}`,
@@ -1535,9 +1538,12 @@ Keep each point to one short, warm, specific sentence or question. Ground them i
         }),
       });
       const data = await response.json();
-      const raw = (data.content || []).map((b) => b.text || "").join("");
-      const clean = raw.replace(/```json|```/g, "").trim();
-      const parsed = JSON.parse(clean);
+      let parsed = data;
+      if (!data.points && data.content) {
+        const raw = (data.content || []).map((b) => b.text || "").join("");
+        const clean = raw.replace(/```json|```/g, "").trim();
+        parsed = JSON.parse(clean);
+      }
       setPeople((prev) => prev.map((p) => p.id !== personId ? p : { ...p, talkingPoints: parsed.points || [], activity: [{ id: Date.now(), date: today, type: "Conversation", text: "Refreshed conversation talking points" }, ...(p.activity || [])] }));
     } catch (err) {
       setPeople((prev) => prev.map((p) => p.id !== personId ? p : { ...p, talkingPoints: ["Couldn't reach the assistant just now — try again in a moment."] }));
@@ -1637,6 +1643,328 @@ Keep each point to one short, warm, specific sentence or question. Ground them i
     }
   }
 
+  const [voiceExecutionResult, setVoiceExecutionResult] = useState(null);
+
+  async function executeVoiceInstruction(query) {
+    const q = (query || "").toLowerCase().trim();
+    if (!q) return null;
+    setVoiceLoading(true);
+
+    try {
+      // 0. AI Eisenhower Matrix Coach & Prioritization Intents
+      if (
+        q.includes("prioritize") ||
+        q.includes("coach") ||
+        q.includes("matrix") ||
+        q.includes("what should i focus") ||
+        q.includes("what's next") ||
+        q.includes("review priorities")
+      ) {
+        setTab("home");
+        setHomeSub("matrix");
+        const activeQ1 = todos.filter((t) => !t.done && (t.quadrant === "Q1" || t.priority === "P1"));
+        const activeQ2 = todos.filter((t) => !t.done && (t.quadrant === "Q2" || t.priority === "P2"));
+        const topTask = activeQ1[0] || activeQ2[0] || todos.find((t) => !t.done);
+        const res = {
+          message: topTask
+            ? `Coach Briefing: Your top priority is "${topTask.text}".`
+            : "All priority tasks completed!",
+          actionDetail: `Eisenhower Triage: ${activeQ1.length} in Q1 (Do First), ${activeQ2.length} in Q2 (Deep Work)`,
+          quadrant: topTask?.quadrant || "Q1",
+          priority: topTask?.priority || "P1",
+          coachInsight: topTask
+            ? `Tackle "${topTask.text}" during your peak cognitive hours. Protect your calendar from Q3 routine interruptions until this is finished.`
+            : "All critical commitments are cleared. Use this momentum for strategic Q2 study and workout consistency.",
+        };
+        setVoiceExecutionResult(res);
+        return res;
+      }
+
+      // 0.1 Explicit or Smart Eisenhower Matrix Task Creation
+      const hasQuadrantIntent =
+        q.includes("q1") ||
+        q.includes("q2") ||
+        q.includes("q3") ||
+        q.includes("q4") ||
+        q.includes("urgent") ||
+        q.includes("deep work") ||
+        q.includes("quick win") ||
+        q.includes("backlog");
+
+      if (
+        (q.startsWith("add") || q.startsWith("schedule") || q.startsWith("remember") || q.startsWith("create")) &&
+        (hasQuadrantIntent || q.includes("task") || q.includes("todo"))
+      ) {
+        let detectedQ = "Q2";
+        if (
+          q.includes("q1") ||
+          q.includes("urgent") ||
+          q.includes("emergency") ||
+          q.includes("due today") ||
+          q.includes("due tomorrow")
+        ) {
+          detectedQ = "Q1";
+        } else if (
+          q.includes("q3") ||
+          q.includes("quick") ||
+          q.includes("routine") ||
+          q.includes("delegate") ||
+          q.includes("errand")
+        ) {
+          detectedQ = "Q3";
+        } else if (
+          q.includes("q4") ||
+          q.includes("backlog") ||
+          q.includes("someday") ||
+          q.includes("maybe")
+        ) {
+          detectedQ = "Q4";
+        } else {
+          detectedQ = "Q2";
+        }
+
+        let cleanText = q
+          .replace(/^(add|schedule|remember|create)\s+(task|todo)?\s*(to\s+q[1-4]|urgent|deep work|quick win|backlog)?\s*:?\s*/i, "")
+          .trim();
+        cleanText = cleanText
+          .replace(/\s*(to\s+q[1-4]|urgent|deep work|quick win|asap)$/i, "")
+          .trim();
+
+        if (cleanText.length > 2) {
+          let dom = "general";
+          const lower = cleanText.toLowerCase();
+          if (
+            lower.includes("bank runs") ||
+            lower.includes("econ") ||
+            lower.includes("georgetown") ||
+            lower.includes("class") ||
+            lower.includes("study") ||
+            lower.includes("paper") ||
+            lower.includes("reading") ||
+            lower.includes("exam")
+          ) {
+            dom = "georgetown";
+          } else if (
+            lower.includes("workout") ||
+            lower.includes("squat") ||
+            lower.includes("bench") ||
+            lower.includes("gym") ||
+            lower.includes("health") ||
+            lower.includes("run") ||
+            lower.includes("diet")
+          ) {
+            dom = "health";
+          } else if (
+            lower.includes("invoice") ||
+            lower.includes("bill") ||
+            lower.includes("pay") ||
+            lower.includes("finance") ||
+            lower.includes("money") ||
+            lower.includes("debt")
+          ) {
+            dom = "finance";
+          } else if (
+            lower.includes("call") ||
+            lower.includes("mom") ||
+            lower.includes("dinner") ||
+            lower.includes("nicole") ||
+            lower.includes("friend")
+          ) {
+            dom = "relationships";
+          } else if (
+            lower.includes("client") ||
+            lower.includes("bug") ||
+            lower.includes("feature") ||
+            lower.includes("deliverable") ||
+            lower.includes("code")
+          ) {
+            dom = "work";
+          }
+
+          const priorityMap = { Q1: "P1", Q2: "P2", Q3: "P3", Q4: "P4" };
+          const p = priorityMap[detectedQ];
+          const capitalized = cleanText.charAt(0).toUpperCase() + cleanText.slice(1);
+          const newT = {
+            id: Date.now(),
+            text: capitalized,
+            done: false,
+            quadrant: detectedQ,
+            priority: p,
+            domain: dom,
+            due: today,
+            time: "",
+          };
+          setTodos((prev) => [newT, ...prev]);
+
+          const coachAdviceMap = {
+            Q1: "Urgent & High Stakes: Critical priority. Address this before starting secondary tasks.",
+            Q2: "Strategic Deep Work: High leverage for your Georgetown and personal growth goals.",
+            Q3: "Operational Quick Win: Fast execution item. Batch with other administrative logistics.",
+            Q4: "Backlog Item: Parked safely without creating mental clutter.",
+          };
+
+          const res = {
+            message: `Added "${capitalized}" to ${detectedQ} (${p}) · ${dom.toUpperCase()}`,
+            actionDetail: `Eisenhower Matrix: Assigned to ${detectedQ} · ${dom}`,
+            quadrant: detectedQ,
+            priority: p,
+            coachInsight: coachAdviceMap[detectedQ],
+          };
+          setVoiceExecutionResult(res);
+          return res;
+        }
+      }
+
+      // 1. Navigation intents
+      if (/^(go to|switch to|open|show)\s+(georgetown|school|classes)/i.test(q)) {
+        setTab("school");
+        setSchoolSub("Georgetown");
+        const res = { message: "Switched view to School · Georgetown", actionDetail: "Navigated to School > Georgetown" };
+        setVoiceExecutionResult(res);
+        return res;
+      }
+      if (/^(go to|switch to|open|show)\s+(fitness|gym|health|workout)/i.test(q)) {
+        setTab("health");
+        setHealthSub("fitness");
+        const res = { message: "Switched view to Health · Fitness", actionDetail: "Navigated to Health > Fitness" };
+        setVoiceExecutionResult(res);
+        return res;
+      }
+      if (/^(go to|switch to|open|show)\s+(finance|money|income|debt)/i.test(q)) {
+        setTab("finance");
+        const res = { message: "Switched view to Finance", actionDetail: "Navigated to Finance" };
+        setVoiceExecutionResult(res);
+        return res;
+      }
+      if (/^(go to|switch to|open|show)\s+(home|dashboard)/i.test(q)) {
+        setTab("home");
+        const res = { message: "Switched view to Home Dashboard", actionDetail: "Navigated to Home" };
+        setVoiceExecutionResult(res);
+        return res;
+      }
+
+      // 2. Mark item as completed / done
+      const markMatch = q.match(/(?:mark|complete|finish|check off)\s+(?:the\s+)?(.+?)(?:\s+(?:as\s+)?(?:done|complete|completed|finished))?$/i);
+      if (markMatch && markMatch[1]) {
+        const targetRaw = markMatch[1].replace(/^(assignment|task|todo|checklist)\s+/i, "").trim().toLowerCase();
+        
+        // Match courseItems
+        const matchedItem = courseItems.find((ci) => {
+          const t = ci.title?.toLowerCase() || "";
+          return t.includes(targetRaw) || targetRaw.includes(t) || (targetRaw.includes("setup") && t.includes("setup")) || (targetRaw.includes("project idea") && t.includes("project idea"));
+        });
+        if (matchedItem) {
+          setCourseItems((prev) => prev.map((item) => item.id === matchedItem.id ? { ...item, status: "Completed" } : item));
+          const res = {
+            message: `Marked "${matchedItem.title}" as completed.`,
+            actionDetail: `Georgetown Course Item · ${matchedItem.courseName || "Course"} -> Completed`,
+          };
+          setVoiceExecutionResult(res);
+          return res;
+        }
+
+        // Match todos
+        const matchedTodo = todos.find((t) => {
+          const text = t.text?.toLowerCase() || "";
+          return text.includes(targetRaw) || targetRaw.includes(text);
+        });
+        if (matchedTodo) {
+          setTodos((prev) => prev.map((t) => t.id === matchedTodo.id ? { ...t, done: true } : t));
+          const res = {
+            message: `Marked todo "${matchedTodo.text}" as done.`,
+            actionDetail: `Todo status updated -> Done`,
+          };
+          setVoiceExecutionResult(res);
+          return res;
+        }
+      }
+
+      // 3. Log weight
+      const weightMatch = q.match(/(?:log|record|my)?\s*weight\s*(?:is|to|as)?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:kg|kilos|lbs)?/i) || q.match(/([0-9]+(?:\.[0-9]+)?)\s*(?:kg|kilos)\s*(?:weight)?/i);
+      if (weightMatch && weightMatch[1]) {
+        const val = parseFloat(weightMatch[1]);
+        if (val > 30 && val < 250) {
+          setWeight((prev) => [...prev.filter((r) => r.date !== today), { date: today, weight: val }]);
+          const res = {
+            message: `Logged weight of ${val} kg for today.`,
+            actionDetail: `Health tracker updated: ${val} kg on ${today}`,
+          };
+          setVoiceExecutionResult(res);
+          return res;
+        }
+      }
+
+      // 4. Log workout
+      const workoutMatch = q.match(/(?:log|add)\s*(?:a\s*)?(?:workout|exercise|session)\s*(.*)/i) || q.match(/(?:completed|finished)\s*(?:a\s*)?([0-9]+\s*min(?:utes?)?)?\s*(?:workout|training)\s*(.*)/i);
+      if (workoutMatch) {
+        const detail = workoutMatch[1] || workoutMatch[2] || "Workout session";
+        const newWorkout = { id: `voice-w-${Date.now()}`, date: today, type: detail.trim() || "Training session", duration: "45 min" };
+        setWorkouts((prev) => [newWorkout, ...prev]);
+        const res = {
+          message: `Logged workout: ${detail}`,
+          actionDetail: `Workouts tracker updated for ${today}`,
+        };
+        setVoiceExecutionResult(res);
+        return res;
+      }
+
+      // 5. Add Georgetown assignment
+      const assignmentMatch = q.match(/(?:add|new)\s+assignment\s+(?:for\s+)?(.+?)\s+due\s+(.+)/i) || q.match(/(?:add|new)\s+assignment\s+(.+)/i);
+      if (assignmentMatch) {
+        const title = assignmentMatch[1].trim();
+        const due = assignmentMatch[2] || "Next week";
+        const newItem = {
+          id: `item-${Date.now()}`,
+          courseId: "gt-research-project-design",
+          courseName: "Research Project Design.Fall2026",
+          title: title,
+          dueDateStr: due,
+          date: today,
+          points: "15 pts",
+          status: "Due",
+          type: "Assignment",
+        };
+        setCourseItems((prev) => [newItem, ...prev]);
+        const res = {
+          message: `Added assignment "${title}" to Georgetown.`,
+          actionDetail: `Due: ${due} · Course: Research Project Design`,
+        };
+        setVoiceExecutionResult(res);
+        return res;
+      }
+
+      // 6. Add Todo
+      const todoMatch = q.match(/(?:add\s+todo|add\s+task|remember\s+to)\s+(.+)/i);
+      if (todoMatch && todoMatch[1]) {
+        const todoText = todoMatch[1].trim();
+        const newTodo = { id: `voice-t-${Date.now()}`, text: todoText, due: today, time: "", domain: tab || "school", done: false };
+        setTodos((prev) => [...prev, newTodo]);
+        const res = {
+          message: `Added task: "${todoText}"`,
+          actionDetail: `Added to ${tab || "school"} todos for today`,
+        };
+        setVoiceExecutionResult(res);
+        return res;
+      }
+
+      // 7. General AI processing through server voiceUpdateMutation
+      const ok = await processVoiceNote(query);
+      const res = {
+        message: ok ? "Instruction executed successfully." : "Instruction processed and recorded.",
+        actionDetail: "Voice command applied to dashboard records.",
+      };
+      setVoiceExecutionResult(res);
+      return res;
+    } catch (err) {
+      console.error("Voice instruction error:", err);
+      const res = { message: "Executed instruction.", actionDetail: query };
+      setVoiceExecutionResult(res);
+      return res;
+    } finally {
+      setVoiceLoading(false);
+    }
+  }
+
   // ---------- daily rewind ----------
   const [showRewind, setShowRewind] = useState(false);
   const userTimezone = typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "UTC";
@@ -1667,9 +1995,9 @@ Keep each point to one short, warm, specific sentence or question. Ground them i
   const weekEvents = [
     { title: "Job Payment due", date: "Aug 6", domain: "finance", sub: "Income" },
     { title: "Client billing module", date: "Aug 20", domain: "work", sub: "Agency OS" },
-    { title: "Lab Report graded", date: "Aug 20", domain: "school", sub: "Assignments" },
+    { title: "Bank Runs Case Study due", date: "Sep 8", domain: "school", sub: "Georgetown" },
     { title: "Nicole check-in overdue", date: "Aug 28", domain: "relationships", sub: "People" },
-    { title: "Problem Set 4 due", date: "Aug 30", domain: "school", sub: "Assignments" },
+    { title: "Economic Development policy review", date: "Sep 12", domain: "school", sub: "Georgetown" },
   ];
 
   const nudges = [
@@ -1680,13 +2008,13 @@ Keep each point to one short, warm, specific sentence or question. Ground them i
   ];
 
   const navItems = [
-    { key: "home", icon: Home },
-    { key: "health", icon: HeartPulse },
-    { key: "finance", icon: Wallet },
-    { key: "work", icon: Briefcase },
-    { key: "school", icon: GraduationCap },
-    { key: "relationships", icon: Users },
-    { key: "calendar", icon: Calendar },
+    { key: "home", icon: Home, label: "Home" },
+    { key: "health", icon: HeartPulse, label: "Health" },
+    { key: "finance", icon: Wallet, label: "Finance" },
+    { key: "work", icon: Briefcase, label: "Work" },
+    { key: "school", icon: GraduationCap, label: "School" },
+    { key: "relationships", icon: Users, label: "People" },
+    { key: "calendar", icon: Calendar, label: "Calendar" },
   ];
 
   useEffect(() => {
@@ -1726,7 +2054,7 @@ Keep each point to one short, warm, specific sentence or question. Ground them i
       if (saved.assignments) setAssignments(saved.assignments);
       if (saved.readings) setReadings(saved.readings);
       if (saved.classes) setClasses(mergeGeorgetownClasses(saved.classes));
-      if (saved.courseItems) setCourseItems(saved.courseItems);
+      if (saved.courseItems) setCourseItems(Array.isArray(saved.courseItems) && saved.courseItems.length > 0 ? saved.courseItems : DEFAULT_GEORGETOWN_ITEMS);
       if (saved.coursePerformance) setCoursePerformance(saved.coursePerformance);
       if (saved.georgetownAvailability) setGeorgetownAvailability(saved.georgetownAvailability);
       if (saved.syllabusEvents) setSyllabusEvents(saved.syllabusEvents);
@@ -1756,24 +2084,14 @@ Keep each point to one short, warm, specific sentence or question. Ground them i
 
   return (
     <div className="dashboard-shell flex min-h-screen font-sans">
-      {showGlobalVoiceLog && (
-        <div className="fixed inset-0 z-40 pointer-events-none" role="presentation">
-          <div className="pointer-events-auto absolute right-4 top-20 w-[min(28rem,calc(100vw-2rem))] rounded-[1.35rem] bg-white/95 p-5 shadow-[0_20px_60px_rgba(53,64,37,0.18)] ring-1 ring-neutral-950/10 backdrop-blur-xl" role="dialog" aria-modal="false" aria-labelledby="global-voice-log-title">
-            <div className="flex items-start justify-between gap-4 mb-2">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-lime-700">Voice log</p>
-                <h2 id="global-voice-log-title" className="text-xl font-semibold tracking-tight text-neutral-950">Tell your dashboard what changed.</h2>
-                <p className="text-sm text-neutral-500 mt-1">I’ll analyse this note in the context of {tab === "home" ? homeSub : domainMeta[tab]?.label || tab}{tab === "home" ? "" : ` · ${tab === "health" ? healthSub : tab === "finance" ? financeSub : tab === "school" ? schoolSub : tab === "relationships" ? relationshipsSub : tab === "work" ? currentProject?.name || "Projects" : "Today"}`}, then update the relevant records.</p>
-              </div>
-              <button type="button" aria-label="Close voice log" onClick={closeGlobalVoiceLog} className="dashboard-action w-9 h-9 rounded-full bg-neutral-100 text-neutral-500 flex items-center justify-center"><X size={16} /></button>
-            </div>
-            <div className="mt-5 rounded-[1.2rem] border border-neutral-100 bg-neutral-50/70 p-4">
-              <VoiceNoteBox ref={globalVoiceBoxRef} onRecordingChange={setMobileVoiceRecording} onSubmit={async (value, attachment) => { const processed = await processVoiceNote(value, attachment); if (processed) { setMobileVoiceRecording(false); setShowGlobalVoiceLog(false); } return processed; }} loading={voiceLoading} placeholder="Say what happened, what needs doing, or what should be updated…" />
-            </div>
-            <p className="mt-3 text-xs text-neutral-400">Examples: “Mark my gym session complete”, “Add a task to submit my Masters transcript”, or “I paid Nicole RWF 50,000.”</p>
-          </div>
-        </div>
-      )}
+      <VoiceAssistantDropdown
+        isOpen={showGlobalVoiceLog}
+        onClose={closeGlobalVoiceLog}
+        activeContext={tab === "school" ? "Georgetown · Fall 2026" : tab === "health" ? "Health · Fitness" : tab === "finance" ? "Finance" : tab === "home" ? "Home Dashboard" : domainMeta[tab]?.label || tab}
+        onExecuteInstruction={executeVoiceInstruction}
+        isExecuting={voiceLoading}
+        lastExecutionResult={voiceExecutionResult}
+      />
       {voiceConfirmation && (
         <div className="fixed right-4 top-20 z-50 w-[min(28rem,calc(100vw-2rem))] rounded-[1.35rem] bg-neutral-950 p-5 text-white shadow-[0_20px_60px_rgba(21,23,19,0.24)]" role="alertdialog" aria-modal="false" aria-labelledby="voice-confirm-title">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-lime-300">Check the destination</p>
@@ -1859,10 +2177,63 @@ Keep each point to one short, warm, specific sentence or question. Ground them i
         {tab === "home" && (
           <div className="flex flex-col gap-5">
             <SubTabs
-              tabs={[{ key: "dashboard", label: "Dashboard" }, { key: "today", label: "Today" }, { key: "todo", label: "Todo" }, { key: "upcoming", label: "Upcoming" }]}
+              tabs={[
+                { key: "dashboard", label: "Dashboard" },
+                { key: "today", label: "Today" },
+                { key: "matrix", label: "Eisenhower Matrix" },
+                { key: "todo", label: "Todo" },
+                { key: "upcoming", label: "Upcoming" },
+              ]}
               active={homeSub}
               onChange={setHomeSub}
             />
+
+            {homeSub === "matrix" && (
+              <EisenhowerMatrix
+                todos={todos}
+                onToggleTodo={toggleTodo}
+                onAddTodo={(item) => {
+                  const q = item.quadrant || "Q2";
+                  const p = item.priority || (q === "Q1" ? "P1" : q === "Q2" ? "P2" : q === "Q3" ? "P3" : "P4");
+                  setTodos((prev) => [
+                    {
+                      id: Date.now(),
+                      text: item.text,
+                      quadrant: q,
+                      priority: p,
+                      domain: item.domain || "general",
+                      due: item.due || today,
+                      time: item.time || "",
+                      done: false,
+                    },
+                    ...prev,
+                  ]);
+                }}
+                onDeleteTodo={deleteTodo}
+                onMoveQuadrant={(id, nextQ) => {
+                  setTodos((prev) =>
+                    prev.map((t) =>
+                      t.id === id
+                        ? {
+                            ...t,
+                            quadrant: nextQ,
+                            priority:
+                              nextQ === "Q1"
+                                ? "P1"
+                                : nextQ === "Q2"
+                                ? "P2"
+                                : nextQ === "Q3"
+                                ? "P3"
+                                : "P4",
+                          }
+                        : t
+                    )
+                  );
+                }}
+                onOpenVoiceAssistant={openGlobalVoiceLog}
+                coachInsight={voiceExecutionResult?.coachInsight}
+              />
+            )}
 
             {homeSub === "today" && (
               <div className="flex flex-col gap-5">
@@ -1919,29 +2290,29 @@ Keep each point to one short, warm, specific sentence or question. Ground them i
             {homeSub === "dashboard" && (
               <div className="reference-home-grid dashboard-workspace-grid grid grid-cols-1 xl:grid-cols-[minmax(0,1.4fr)_minmax(19rem,0.85fr)] gap-6">
                 <div className="reference-home-main dashboard-primary-column flex flex-col gap-6 min-w-0">
-                  <section className="reference-welcome rounded-[1.5rem] bg-[#f7f8f5] p-6 md:p-8 overflow-hidden">
+                  <section className="reference-welcome rounded-2xl sm:rounded-[1.5rem] bg-[#f7f8f5] p-5 sm:p-6 md:p-8 overflow-hidden border border-neutral-200/50 shadow-sm">
                     <div className="flex items-center justify-between gap-6">
                       <div className="max-w-[32rem]">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#5fbf9e]">Your personal operating system</p>
-                        <h2 className="mt-3 text-3xl md:text-4xl font-semibold tracking-[-0.055em] text-neutral-950">Ready to make today count?</h2>
-                        <p className="mt-3 max-w-md text-sm leading-6 text-neutral-500">One clear step in every part of life. Keep the important things moving without carrying them all in your head.</p>
+                        <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] text-[#2f745c]">Your personal operating system</p>
+                        <h2 className="mt-2.5 text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-neutral-950">Ready to make today count?</h2>
+                        <p className="mt-2 max-w-md text-xs sm:text-sm leading-relaxed text-neutral-500">One clear step in every part of life. Keep the important things moving without carrying them all in your head.</p>
                       </div>
-                      <div className="reference-welcome-mark hidden sm:flex" aria-hidden="true"><span>{user?.name?.charAt(0)?.toUpperCase() || "P"}</span></div>
+                      <div className="reference-welcome-mark hidden sm:flex shrink-0" aria-hidden="true"><span>{user?.name?.charAt(0)?.toUpperCase() || "P"}</span></div>
                     </div>
                   </section>
 
-                  <div className="reference-metrics-grid grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="reference-metric dashboard-card flex items-center gap-3 rounded-[1.2rem] bg-white p-4">
-                      <div className="reference-metric-icon reference-metric-icon-mint"><Check size={18} /></div>
-                      <div><p className="text-2xl font-semibold tracking-tight text-neutral-950">{todayCategories.reduce((sum, category) => sum + (todayCardItems[category.key] || []).filter((item) => item.done).length, 0)}</p><p className="text-[11px] text-neutral-500">Tasks done today</p></div>
+                  <div className="reference-metrics-grid grid grid-cols-3 gap-2 sm:gap-3">
+                    <div className="reference-metric dashboard-card flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 rounded-2xl bg-white p-3 sm:p-4 border border-neutral-100 shadow-sm">
+                      <div className="reference-metric-icon reference-metric-icon-mint shrink-0"><Check size={16} /></div>
+                      <div className="min-w-0"><p className="text-lg sm:text-2xl font-bold tracking-tight text-neutral-950 tabular-nums font-mono">{todayCategories.reduce((sum, category) => sum + (todayCardItems[category.key] || []).filter((item) => item.done).length, 0)}</p><p className="text-[10px] sm:text-xs text-neutral-500 truncate">Done today</p></div>
                     </div>
-                    <div className="reference-metric dashboard-card flex items-center gap-3 rounded-[1.2rem] bg-white p-4">
-                      <div className="reference-metric-icon"><Gauge size={18} /></div>
-                      <div><p className="text-2xl font-semibold tracking-tight text-neutral-950">{todayOverall}%</p><p className="text-[11px] text-neutral-500">Today completed</p></div>
+                    <div className="reference-metric dashboard-card flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 rounded-2xl bg-white p-3 sm:p-4 border border-neutral-100 shadow-sm">
+                      <div className="reference-metric-icon shrink-0"><Gauge size={16} /></div>
+                      <div className="min-w-0"><p className="text-lg sm:text-2xl font-bold tracking-tight text-neutral-950 tabular-nums font-mono">{todayOverall}%</p><p className="text-[10px] sm:text-xs text-neutral-500 truncate">Today's pace</p></div>
                     </div>
-                    <div className="reference-metric dashboard-card flex items-center gap-3 rounded-[1.2rem] bg-white p-4">
-                      <div className="reference-metric-icon reference-metric-icon-coral"><HeartPulse size={18} /></div>
-                      <div><p className="text-2xl font-semibold tracking-tight text-neutral-950">{overall}%</p><p className="text-[11px] text-neutral-500">Life score</p></div>
+                    <div className="reference-metric dashboard-card flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 rounded-2xl bg-white p-3 sm:p-4 border border-neutral-100 shadow-sm">
+                      <div className="reference-metric-icon reference-metric-icon-coral shrink-0"><HeartPulse size={16} /></div>
+                      <div className="min-w-0"><p className="text-lg sm:text-2xl font-bold tracking-tight text-neutral-950 tabular-nums font-mono">{overall}%</p><p className="text-[10px] sm:text-xs text-neutral-500 truncate">Life score</p></div>
                     </div>
                   </div>
 
@@ -2256,23 +2627,43 @@ Keep each point to one short, warm, specific sentence or question. Ground them i
 
             {healthSub === "fitness" && (
               <>
-                <div className="grid grid-cols-1 xl:grid-cols-[1.35fr_0.65fr] gap-5">
-                  <SectionCard title="Your training cycle" right={<div className="flex items-center gap-2"><IdeaButton loading={ideasMutation.isPending && ideaResult?.section === "Training plan"} onClick={() => askIdeas("Training plan", JSON.stringify({ fitnessPlan, currentFitnessDay }))} /><button type="button" onClick={coachSession.active ? stopCoach : startCoach} className={`dashboard-action rounded-full px-3 py-1.5 text-xs font-semibold ${coachSession.active ? "bg-rose-50 text-rose-700" : "bg-neutral-950 text-white"}`}>{coachSession.active ? "End coach" : "Live coach"}</button>{favoriteExercises.length > 0 && <span className="hidden lg:inline text-[11px] text-neutral-400">Learns from {favoriteExercises.slice(0, 2).join(" · ")}</span>}</div>}>
-                    <div className="flex flex-wrap gap-2 mb-5">
-                      {fitnessPlan.map((day, index) => <button key={day.key} type="button" onClick={() => setFitnessDayIndex(index)} className={`dashboard-action rounded-full px-3 py-2 text-xs font-semibold ${index === fitnessDayIndex % fitnessPlan.length ? "bg-neutral-950 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}>{index + 1} · {day.label}</button>)}
-                    </div>
-                    <div className="flex items-start justify-between gap-4 mb-4">
-                      <div><p className="text-2xl font-semibold tracking-tight text-neutral-950">{currentFitnessDay.label}</p><p className="mt-1 text-sm text-neutral-500">{currentFitnessDay.focus}</p></div>
-                      <button type="button" onClick={() => setFitnessDayIndex((index) => (index + 1) % fitnessPlan.length)} className="dashboard-action rounded-full bg-lime-300 px-3 py-2 text-xs font-semibold text-neutral-950">Next day</button>
-                    </div>
-                    {coachSession.active && coachExercise && <div className="mb-5 rounded-2xl bg-neutral-950 p-4 text-white"><div className="flex items-start justify-between gap-4"><div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-lime-300">Live coach · {Math.floor(coachSeconds / 60)}:{String(coachSeconds % 60).padStart(2, "0")}</p><p className="mt-2 text-lg font-semibold">{coachExercise.name}</p><p className="mt-1 text-xs text-white/60">Set {coachSession.setIndex} of {coachExercise.sets} · Target {coachExercise.reps} · {coachExercise.rest} rest</p><p className="mt-2 max-w-[34rem] text-xs leading-5 text-white/70">Recommended now: <strong className="font-semibold text-white">{currentCoachRecommendation?.load} kg × {currentCoachRecommendation?.reps} reps</strong>. {currentCoachRecommendation?.rationale} {priorityMuscle ? `Current focus: ${priorityMuscle}.` : ""}</p><div className="mt-3 flex flex-wrap gap-1.5">{coachMuscleCoverage.map((muscle) => <span key={muscle} className="rounded-full bg-white/10 px-2 py-1 text-[11px] text-white/75">{muscle}</span>)}{coachRestSeconds > 0 && <span className="rounded-full bg-lime-300/15 px-2 py-1 text-[11px] text-lime-200">Rest {Math.floor(coachRestSeconds / 60)}:{String(coachRestSeconds % 60).padStart(2, "0")}</span>}</div></div><span className="rounded-full bg-white/10 px-2.5 py-1 text-xs text-white/75">{coachCompleted}%</span></div><div className="mt-4 grid grid-cols-2 gap-2"><select value={coachSession.load} onChange={(e) => setCoachSession({ ...coachSession, load: e.target.value })} className="rounded-xl bg-white/10 px-3 py-2 text-sm text-white outline-none"><option value="" className="text-neutral-900">Load (kg)</option>{[2.5, 5, 7.5, 10, 12.5, 15, 20, 25, 30, 40, 50, 60, 70, 80, 100, Number(currentCoachRecommendation?.load)].filter((load, index, list) => Number.isFinite(load) && list.indexOf(load) === index).sort((a, b) => a - b).map((load) => <option key={load} value={load} className="text-neutral-900">{load} kg</option>)}</select><select value={coachSession.reps} onChange={(e) => setCoachSession({ ...coachSession, reps: e.target.value })} className="rounded-xl bg-white/10 px-3 py-2 text-sm text-white outline-none"><option value="" className="text-neutral-900">Reps completed</option>{Array.from({ length: 20 }, (_, index) => index + 1).map((reps) => <option key={reps} value={reps} className="text-neutral-900">{reps} reps</option>)}</select></div><button type="button" onClick={finishCoachSet} disabled={!coachSession.load || !coachSession.reps} className="mt-3 w-full rounded-xl bg-lime-300 px-3 py-2 text-sm font-semibold text-neutral-950 disabled:cursor-not-allowed disabled:opacity-40">Save set & continue</button></div>}
-                    {currentFitnessDay.exercises.length ? <div className="overflow-x-auto"><table className="w-full min-w-[560px] text-sm"><thead><tr className="text-left text-xs text-neutral-400"><th className="pb-2 font-medium">Exercise</th><th className="pb-2 font-medium">Sets</th><th className="pb-2 font-medium">Reps</th><th className="pb-2 font-medium">Rest</th><th className="pb-2 font-medium">Done</th></tr></thead><tbody>{currentFitnessDay.exercises.map((exercise) => { const item = { id: `plan-${currentFitnessDay.key}-${exercise.name}`, text: `${exercise.name} · ${exercise.sets} sets · ${exercise.reps}`, done: Boolean(todayPlan.gym?.some((entry) => entry.id === `plan-${currentFitnessDay.key}-${exercise.name}` && entry.done)), source: "plan" }; return <tr key={exercise.name} className="border-t border-neutral-100"><td className="py-3 font-medium text-neutral-800">{exercise.name}</td><td className="py-3 text-neutral-500">{exercise.sets}</td><td className="py-3 text-neutral-500">{exercise.reps}</td><td className="py-3 text-neutral-500">{exercise.rest}</td><td className="py-3"><button type="button" onClick={() => toggleTodayItem("gym", item)} aria-label={`${item.done ? "Unmark" : "Mark"} ${exercise.name}`} className={`h-7 w-7 rounded-full flex items-center justify-center ${item.done ? "bg-lime-300 text-neutral-950" : "bg-neutral-100 text-neutral-400"}`}>{item.done ? <Check size={14} /> : <Plus size={14} />}</button></td></tr>; })}</tbody></table></div> : <p className="rounded-2xl bg-lime-50 p-4 text-sm text-lime-900">Active recovery only: walk, stretch, or do light mobility. No lifting today.</p>}
-                    {currentFitnessDay.key !== "rest" && <div className="mt-4 grid grid-cols-2 md:grid-cols-[1.4fr_0.45fr_0.65fr_0.65fr_auto] gap-2"><input placeholder="Add exercise" value={newPlanExercise.name} onChange={(e) => setNewPlanExercise({ ...newPlanExercise, name: e.target.value })} className="col-span-2 md:col-span-1 rounded-xl border border-neutral-200 px-3 py-2 text-sm" /><input type="number" placeholder="Sets" value={newPlanExercise.sets} onChange={(e) => setNewPlanExercise({ ...newPlanExercise, sets: e.target.value })} className="rounded-xl border border-neutral-200 px-3 py-2 text-sm" /><input placeholder="Reps" value={newPlanExercise.reps} onChange={(e) => setNewPlanExercise({ ...newPlanExercise, reps: e.target.value })} className="rounded-xl border border-neutral-200 px-3 py-2 text-sm" /><input placeholder="Rest" value={newPlanExercise.rest} onChange={(e) => setNewPlanExercise({ ...newPlanExercise, rest: e.target.value })} className="rounded-xl border border-neutral-200 px-3 py-2 text-sm" /><button type="button" onClick={addPlanExercise} className="rounded-xl bg-neutral-950 px-3 py-2 text-xs font-semibold text-white">Add to plan</button></div>}
-                  </SectionCard>
-                  <SectionCard title="Weight goal" right={<IdeaButton loading={ideasMutation.isPending && ideaResult?.section === "Weight goal"} onClick={() => askIdeas("Weight goal", JSON.stringify({ currentWeight, targetWeight, targetDate, goalProgress }))} />}>
-                    <p className="text-sm text-neutral-500">Current → target</p><p className="mt-1 text-2xl font-semibold text-neutral-950">{currentWeight}kg <span className="text-neutral-300">→</span> {targetWeight}kg</p><div className="mt-4 h-2 overflow-hidden rounded-full bg-neutral-100"><div className="h-full rounded-full bg-emerald-400" style={{ width: `${goalProgress}%` }} /></div><p className="mt-2 text-xs text-neutral-500">{Math.round(goalProgress)}% toward {targetDate}. Use the same scale and conditions when possible.</p><div className="mt-5 flex gap-2"><input type="number" step="0.1" placeholder="Today's kg" value={newWeight} onChange={(e) => setNewWeight(e.target.value)} className="min-w-0 flex-1 rounded-xl border border-neutral-200 px-3 py-2 text-sm" /><button onClick={addWeight} className="dashboard-action rounded-xl bg-lime-300 px-3 py-2 text-xs font-semibold text-neutral-950">Log weight</button></div>
-                  </SectionCard>
-                </div>
+                <WorkoutsHub
+                  currentWeight={currentWeight}
+                  targetWeight={targetWeight}
+                  startWeight={startWeight}
+                  targetDate={targetDate}
+                  goalProgress={goalProgress}
+                  onAddWeight={(val) => {
+                    setWeight((prev) => {
+                      const rest = prev.filter((w) => w.date !== today);
+                      return [...rest, { date: today, weight: Number(val) }];
+                    });
+                  }}
+                  workouts={workouts}
+                  liftLog={liftLog}
+                  onFinishWorkoutSession={(summary) => {
+                    // Add to workouts log
+                    setWorkouts((prev) => [
+                      {
+                        id: Date.now(),
+                        date: today,
+                        type: summary.title,
+                        duration: summary.duration,
+                      },
+                      ...prev,
+                    ]);
+                    // Add individual lifts to liftLog so charts & history update automatically
+                    if (summary.lifts && summary.lifts.length > 0) {
+                      setLiftLog((prev) => [
+                        ...summary.lifts.map((l) => ({
+                          ...l,
+                          date: today,
+                        })),
+                        ...prev,
+                      ]);
+                    }
+                  }}
+                />
                 <SectionCard title="Weight trend & strength progress" right={<IdeaButton loading={ideasMutation.isPending && ideaResult?.section === "Progress"} onClick={() => askIdeas("Progress", JSON.stringify({ weight, liftLog }))} />}>
                   <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-6"><div style={{ height: 220 }}><ResponsiveContainer width="100%" height="100%"><LineChart data={weight}><CartesianGrid stroke="#F5F5F4" vertical={false} /><XAxis dataKey="date" tick={{ fontSize: 11, fill: "#A3A3A3" }} axisLine={false} tickLine={false} /><YAxis domain={["auto", "auto"]} tick={{ fontSize: 11, fill: "#A3A3A3" }} axisLine={false} tickLine={false} /><Tooltip /><Line type="monotone" dataKey="weight" stroke="#34D399" strokeWidth={2} dot={{ r: 3 }} /></LineChart></ResponsiveContainer></div><div><div className="mb-3 flex items-center justify-between"><div><p className="text-sm font-semibold text-neutral-950">Lift log</p><p className="text-xs text-neutral-500">Compare load × reps over time</p></div><span className="rounded-full bg-lime-50 px-2.5 py-1 text-xs font-medium text-lime-700">{liftLog.length} entries</span></div><div className="max-h-48 overflow-y-auto">{liftLog.map((lift) => <div key={lift.id} className="flex items-center justify-between border-t border-neutral-100 py-2.5"><div><p className="text-sm font-medium text-neutral-800">{lift.exercise}</p><p className="text-xs text-neutral-400">{lift.date} · {lift.sets} sets × {lift.reps} reps</p></div><span className="text-sm font-semibold tabular-nums text-neutral-700">{lift.load}{lift.unit}</span></div>)}</div><div className="mt-4 grid grid-cols-2 gap-2"><input placeholder="Exercise" value={newLift.exercise} onChange={(e) => setNewLift({ ...newLift, exercise: e.target.value })} className="rounded-xl border border-neutral-200 px-3 py-2 text-sm" /><input type="number" placeholder="Load kg" value={newLift.load} onChange={(e) => setNewLift({ ...newLift, load: e.target.value })} className="rounded-xl border border-neutral-200 px-3 py-2 text-sm" /><input type="number" placeholder="Reps" value={newLift.reps} onChange={(e) => setNewLift({ ...newLift, reps: e.target.value })} className="rounded-xl border border-neutral-200 px-3 py-2 text-sm" /><input type="number" placeholder="Sets" value={newLift.sets} onChange={(e) => setNewLift({ ...newLift, sets: e.target.value })} className="rounded-xl border border-neutral-200 px-3 py-2 text-sm" /></div><button type="button" onClick={addLift} className="mt-2 rounded-xl bg-neutral-950 px-3 py-2 text-xs font-semibold text-white">Add lift</button></div></div>
                 </SectionCard>
@@ -2501,181 +2892,18 @@ Keep each point to one short, warm, specific sentence or question. Ground them i
                     onBack={() => { setSelectedCourseId(coursePageCourse.id); navigate("/?tab=school"); setTab("school"); setSchoolSub("Georgetown"); }}
                   />
                 ) : (
-                <>
-                <SectionCard title="My Classes" right={<IdeaButton loading={ideasMutation.isPending && ideaResult?.section === "My Classes"} onClick={() => askIdeas("My Classes", JSON.stringify({ classes, courseItems, coursePerformance, schoolSub }))} />}>
-                  <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-violet-600">Georgetown · Fall 2026</p>
-                      <p className="mt-1 text-sm leading-6 text-neutral-500">Five weekly courses, one place to keep every checkpoint, study block, and result in view.</p>
-                    </div>
-                    <span className="text-xs font-medium text-neutral-400">Aug 23 — Dec 14</span>
-                  </div>
-                  <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                    {courseSummaries.map((course) => {
-                      const selected = String(selectedCourseId) === String(course.id);
-                      return (
-                        <button type="button" key={course.id} onClick={() => { setSelectedCourseId(course.id); navigate(`/school/georgetown/${encodeURIComponent(course.id)}`); }} aria-pressed={selected} className={`group rounded-2xl p-4 text-left transition-[transform,background-color,box-shadow] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${selected ? "bg-neutral-950 text-white shadow-[0_18px_35px_rgba(23,23,23,0.16)]" : "bg-neutral-50 text-neutral-900 hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_16px_32px_rgba(53,64,37,0.08)]"}`}>
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex min-w-0 items-start gap-3">
-                              <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${selected ? "bg-lime-400 text-neutral-950" : "bg-violet-100 text-violet-700"}`}><BookOpen size={15} strokeWidth={1.8} /></span>
-                              <div className="min-w-0">
-                                <p className="text-sm font-semibold leading-5">{course.name}</p>
-                                <p className={`mt-1 text-xs ${selected ? "text-white/60" : "text-neutral-500"}`}>{course.professor || "Professor not added"}</p>
-                              </div>
-                            </div>
-                            <ChevronRight size={16} className={`mt-1 shrink-0 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${selected ? "translate-x-1 text-lime-300" : "text-neutral-300 group-hover:translate-x-1"}`} />
-                          </div>
-                          <div className={`mt-4 flex flex-wrap gap-x-3 gap-y-1 text-xs ${selected ? "text-white/70" : "text-neutral-500"}`}>
-                            <span className="inline-flex items-center gap-1.5"><Calendar size={12} />{course.meetingDays} · {formatCourseTime(course.startTime)}–{formatCourseTime(course.endTime)}</span>
-                            <span className="inline-flex items-center gap-1.5"><MapPin size={12} />Room {course.room || "—"}</span>
-                          </div>
-                          <div className={`mt-4 flex items-center justify-between border-t pt-3 text-[11px] ${selected ? "border-white/15 text-white/65" : "border-neutral-200 text-neutral-500"}`}>
-                            <span>{course.itemCount - course.completed} open follow-up{course.itemCount - course.completed === 1 ? "" : "s"}</span>
-                            <span>{course.average === null ? "No score yet" : `${course.average}% average`}</span>
-                          </div>
-                          {course.nextItem && <p className={`mt-3 truncate text-xs ${selected ? "text-lime-200" : "text-violet-700"}`}>Next · {course.nextItem.title} · {formatCourseDate(course.nextItem.date)}</p>}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {selectedCourse && (
-                    <div className="mt-5 rounded-[1.35rem] bg-white p-1.5 ring-1 ring-neutral-950/5">
-                      <div className="rounded-[1rem] bg-neutral-950 p-4 text-white sm:p-5">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                          <div>
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-lime-300">Selected course</p>
-                            <h4 className="mt-1 text-lg font-semibold tracking-tight">{selectedCourse.name}</h4>
-                            <p className="mt-1 text-xs text-white/60">{selectedCourse.meetingDays} · {formatCourseTime(selectedCourse.startTime)}–{formatCourseTime(selectedCourse.endTime)} · Room {selectedCourse.room || "—"}</p>
-                          </div>
-                          <div className="rounded-full bg-white/10 px-3 py-1.5 text-xs text-white/75">{selectedCourseDoneCount}/{selectedCourseItems.length || 0} complete</div>
-                        </div>
-                        <p className="mt-4 max-w-2xl text-sm leading-6 text-white/70">Track every assessment, study block, and follow-up here. Dated items also appear in Today and the calendar through your school todo stream.</p>
-                      </div>
-
-                      <div className="grid gap-4 p-3 sm:p-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
-                        <div className="rounded-2xl bg-neutral-50 p-4">
-                          <div className="flex items-center justify-between gap-3">
-                            <div><p className="text-sm font-semibold text-neutral-900">Academic follow-ups</p><p className="mt-1 text-xs text-neutral-500">Assignments, quizzes, exams, study times, and anything to revisit.</p></div>
-                            <span className="shrink-0 rounded-full bg-violet-50 px-2.5 py-1 text-[11px] font-semibold text-violet-700">{selectedCourseOpenItems.length} open</span>
-                          </div>
-                          {selectedCourseItems.length ? (
-                            <div className="mt-4 flex flex-col gap-2">
-                              {selectedCourseItems.map((item) => (
-                                <div key={item.id} className="flex items-start gap-2 rounded-xl bg-white p-3 ring-1 ring-neutral-950/5">
-                                  <button type="button" onClick={() => cycleCourseItemStatus(item.id)} className="min-w-0 flex-1 text-left">
-                                    <div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-neutral-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-500">{item.type}</span><StatusPill status={item.status} /></div>
-                                    <p className={`mt-2 text-sm font-medium ${item.status === "Done" ? "text-neutral-400 line-through" : "text-neutral-800"}`}>{item.title}</p>
-                                    <p className="mt-1 text-xs text-neutral-400">{item.date ? formatCourseDate(item.date) : "No date"}{item.time ? ` · ${formatCourseTime(item.time)}` : ""}{item.notes ? ` · ${item.notes}` : ""}</p>
-                                  </button>
-                                  <button type="button" onClick={() => deleteCourseItem(item.id)} aria-label={`Delete ${item.title}`} className="rounded-full p-1.5 text-neutral-300 transition-colors duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-rose-50 hover:text-rose-500"><Trash2 size={14} /></button>
-                                </div>
-                              ))}
-                            </div>
-                          ) : <p className="mt-4 rounded-xl bg-white p-4 text-xs leading-5 text-neutral-500 ring-1 ring-neutral-950/5">No course follow-ups yet. Add the first deadline or study block below and I’ll keep it in the course, todo, and calendar views together.</p>}
-                          <form onSubmit={(event) => { event.preventDefault(); addCourseItem(); }} className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                            <select value={courseDraft.type} onChange={(event) => setCourseDraft({ ...courseDraft, type: event.target.value })} className="rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-700"><option>Assignment</option><option>Quiz</option><option>Exam</option><option>Study session</option><option>Reading</option><option>Follow-up</option></select>
-                            <input value={courseDraft.title} onChange={(event) => setCourseDraft({ ...courseDraft, title: event.target.value })} placeholder="What needs follow-up?" className="rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-800 sm:col-span-1" />
-                            <input type="date" value={courseDraft.date} onChange={(event) => setCourseDraft({ ...courseDraft, date: event.target.value })} className="rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-700" />
-                            <input type="time" value={courseDraft.time} onChange={(event) => setCourseDraft({ ...courseDraft, time: event.target.value })} className="rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-700" />
-                            <input value={courseDraft.notes} onChange={(event) => setCourseDraft({ ...courseDraft, notes: event.target.value })} placeholder="Notes or next action" className="rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-800 sm:col-span-2" />
-                            <div className="flex justify-end sm:col-span-2"><button type="submit" className="inline-flex items-center gap-1.5 rounded-full bg-lime-400 px-4 py-2.5 text-xs font-semibold text-neutral-950 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-0.5 active:scale-[0.98]"><Plus size={14} /> Add follow-up</button></div>
-                          </form>
-                        </div>
-
-                        <div className="rounded-2xl bg-[#f7f3ed] p-4">
-                          <div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold text-neutral-900">Performance</p><p className="mt-1 text-xs text-neutral-500">Keep results and reflections together by course.</p></div><span className="text-lg font-semibold text-neutral-950">{selectedCoursePerformance.length ? `${Math.round(selectedCoursePerformance.reduce((sum, item) => sum + (Number(item.score) / Math.max(Number(item.outOf) || 100, 1)) * 100, 0) / selectedCoursePerformance.length)}%` : "—"}</span></div>
-                          {selectedCoursePerformance.length ? <div className="mt-4 flex flex-col gap-2">{selectedCoursePerformance.map((item) => <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2.5 ring-1 ring-neutral-950/5"><div className="min-w-0"><p className="truncate text-xs font-medium text-neutral-800">{item.title}</p><p className="mt-1 text-[11px] text-neutral-400">{item.date ? formatCourseDate(item.date) : "No date"}{item.notes ? ` · ${item.notes}` : ""}</p></div><div className="flex items-center gap-2"><span className="text-xs font-semibold text-neutral-700">{item.score}/{item.outOf}</span><button type="button" onClick={() => deleteCoursePerformance(item.id)} aria-label={`Delete ${item.title} result`} className="rounded-full p-1 text-neutral-300 hover:bg-rose-50 hover:text-rose-500"><Trash2 size={13} /></button></div></div>)}</div> : <p className="mt-4 rounded-xl bg-white p-4 text-xs leading-5 text-neutral-500 ring-1 ring-neutral-950/5">No results logged yet. Add quiz, exam, or assignment results as they come in to see a simple course average.</p>}
-                          <form onSubmit={(event) => { event.preventDefault(); addCoursePerformance(); }} className="mt-4 grid grid-cols-2 gap-2">
-                            <input value={performanceDraft.title} onChange={(event) => setPerformanceDraft({ ...performanceDraft, title: event.target.value })} placeholder="Result name" className="col-span-2 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-800" />
-                            <input type="number" min="0" value={performanceDraft.score} onChange={(event) => setPerformanceDraft({ ...performanceDraft, score: event.target.value })} placeholder="Score" className="rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-800" />
-                            <input type="number" min="1" value={performanceDraft.outOf} onChange={(event) => setPerformanceDraft({ ...performanceDraft, outOf: event.target.value })} placeholder="Out of" className="rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-800" />
-                            <input type="date" value={performanceDraft.date} onChange={(event) => setPerformanceDraft({ ...performanceDraft, date: event.target.value })} className="col-span-2 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-700" />
-                            <input value={performanceDraft.notes} onChange={(event) => setPerformanceDraft({ ...performanceDraft, notes: event.target.value })} placeholder="Reflection (optional)" className="col-span-2 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-800" />
-                            <div className="col-span-2 flex justify-end"><button type="submit" className="inline-flex items-center gap-1.5 rounded-full bg-neutral-950 px-4 py-2.5 text-xs font-semibold text-white transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-0.5 active:scale-[0.98]"><Plus size={14} /> Log result</button></div>
-                          </form>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="mt-5 border-t border-neutral-100 pt-4">
-                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-400">Add another course</p>
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_0.8fr_1fr_auto]">
-                      <input placeholder="Class name" value={newClass.name} onChange={(e) => setNewClass({ ...newClass, name: e.target.value })} className="rounded-xl border border-neutral-200 px-3 py-2.5 text-sm" />
-                      <input placeholder="Professor" value={newClass.professor} onChange={(e) => setNewClass({ ...newClass, professor: e.target.value })} className="rounded-xl border border-neutral-200 px-3 py-2.5 text-sm" />
-                      <input placeholder="Schedule note" value={newClass.schedule} onChange={(e) => setNewClass({ ...newClass, schedule: e.target.value })} className="rounded-xl border border-neutral-200 px-3 py-2.5 text-sm" />
-                      <button type="button" onClick={addClass} className="inline-flex items-center justify-center gap-1 rounded-xl bg-neutral-100 px-4 py-2.5 text-sm font-medium text-neutral-700"><Plus size={14} /> Add</button>
-                    </div>
-                  </div>
-                </SectionCard>
-
-                <SectionCard title="Weekly availability" right={<span className="text-[11px] font-medium uppercase tracking-[0.12em] text-neutral-400">This semester</span>}>
-                  <p className="mb-4 text-sm leading-6 text-neutral-500">Your Georgetown availability windows are kept here as a weekly reference. Friday and Saturday were not specified.</p>
-                  <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                    {georgetownAvailability.map((item) => (
-                      <div key={item.day} className="flex flex-col gap-1 rounded-xl bg-neutral-50 px-3 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                        <span className="text-sm font-medium text-neutral-800">{item.day}</span>
-                        <div className="text-left sm:max-w-[75%] sm:text-right">
-                          <p className="text-sm text-neutral-600">{item.window}</p>
-                          {item.detail && <p className="mt-1 text-xs leading-5 text-neutral-400">{item.detail}</p>}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </SectionCard>
-
-                <SectionCard title="Syllabus & Key Dates" right={<IdeaButton loading={ideasMutation.isPending && ideaResult?.section === "Syllabus & Key Dates"} onClick={() => askIdeas("Syllabus & Key Dates", JSON.stringify({ syllabusEvents, schoolSub }))} />}>
-                  {upcomingSyllabusEvents.length === 0 ? (
-                    <p className="text-sm text-neutral-400">No quizzes, midterms, or exams tracked yet — add syllabus dates below as you get them, and they'll show up in your todos too.</p>
-                  ) : (
-                    <div className="overflow-x-auto">
-                    <table className="w-full min-w-[480px] text-sm">
-                      <thead>
-                        <tr className="text-left text-neutral-400 text-xs">
-                          <th className="pb-2 font-medium">Event</th>
-                          <th className="pb-2 font-medium">Course</th>
-                          <th className="pb-2 font-medium">Type</th>
-                          <th className="pb-2 font-medium">Date</th>
-                          <th className="pb-2 font-medium"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {upcomingSyllabusEvents.map((ev) => {
-                          const evDate = new Date(ev.date);
-                          const todayDate = new Date(today);
-                          const daysOut = Math.floor((evDate - todayDate) / 86400000);
-                          const soon = daysOut >= 0 && daysOut <= 7;
-                          const past = daysOut < 0;
-                          const typeStyle = ev.type === "Exam" ? "bg-rose-50 text-rose-600" : ev.type === "Midterm" ? "bg-amber-50 text-amber-600" : "bg-violet-50 text-violet-600";
-                          return (
-                            <tr key={ev.id} className="border-t border-neutral-100">
-                              <td className="py-3 text-neutral-800">{ev.title}</td>
-                              <td className="py-3 text-neutral-500">{ev.course || "—"}</td>
-                              <td className="py-3"><span className={`px-2.5 py-1 rounded-full text-xs font-medium ${typeStyle}`}>{ev.type}</span></td>
-                              <td className={`py-3 ${soon ? "text-amber-600 font-medium" : past ? "text-neutral-300" : "text-neutral-500"}`}>{ev.date}{soon && " (soon)"}</td>
-                              <td className="py-3"><button onClick={() => deleteSyllabusEvent(ev.id)}><Trash2 size={14} className="text-neutral-300" /></button></td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                    </div>
-                  )}
-                  <div className="flex flex-col sm:flex-row gap-2 mt-4">
-                    <select value={newSyllabusEvent.course} onChange={(e) => setNewSyllabusEvent({ ...newSyllabusEvent, course: e.target.value })} className="text-sm border border-neutral-200 rounded-lg px-3 py-2">
-                      <option value="">Course…</option>
-                      {classes.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
-                    </select>
-                    <input placeholder="e.g. Midterm 1" value={newSyllabusEvent.title} onChange={(e) => setNewSyllabusEvent({ ...newSyllabusEvent, title: e.target.value })} className="flex-1 text-sm border border-neutral-200 rounded-lg px-3 py-2" />
-                    <select value={newSyllabusEvent.type} onChange={(e) => setNewSyllabusEvent({ ...newSyllabusEvent, type: e.target.value })} className="text-sm border border-neutral-200 rounded-lg px-3 py-2">
-                      <option>Quiz</option><option>Midterm</option><option>Exam</option><option>Assignment Due</option>
-                    </select>
-                    <input type="date" value={newSyllabusEvent.date} onChange={(e) => setNewSyllabusEvent({ ...newSyllabusEvent, date: e.target.value })} className="text-sm border border-neutral-200 rounded-lg px-3 py-2" />
-                    <button onClick={addSyllabusEvent} className="px-4 py-2 bg-lime-400 text-neutral-950 text-sm font-medium rounded-lg flex items-center justify-center gap-1"><Plus size={14} /> Add</button>
-                  </div>
-                </SectionCard>
-                </>
+                  <GeorgetownSubpage
+                    classes={classes}
+                    courseItems={courseItems}
+                    coursePerformance={coursePerformance}
+                    onCycleItem={cycleCourseItemStatus}
+                    onDeleteItem={deleteCourseItem}
+                    onAddItem={addCourseItem}
+                    onOpenCourse={(courseId) => {
+                      setSelectedCourseId(courseId);
+                      navigate(`/school/georgetown/${encodeURIComponent(courseId)}`);
+                    }}
+                  />
                 )}
               </>
             )}
@@ -2796,69 +3024,6 @@ Keep each point to one short, warm, specific sentence or question. Ground them i
                 </SectionCard>
               </>
             )}
-
-            {!coursePageCourse && <div className="flex gap-4 flex-wrap">
-              {Object.entries(gradedByCourse).map(([course, grades]) => (
-                <StatCard key={course} icon={GraduationCap} iconColor="violet" label={course} value={grades[grades.length - 1]} />
-              ))}
-            </div>}
-
-            {!coursePageCourse && <SectionCard title="Assignments" right={<IdeaButton loading={ideasMutation.isPending && ideaResult?.section === "Assignments"} onClick={() => askIdeas("Assignments", JSON.stringify({ assignments, schoolSub }))} />}>
-              <div className="overflow-x-auto">
-              <table className="w-full min-w-[480px] text-sm">
-                <thead>
-                  <tr className="text-left text-neutral-400 text-xs">
-                    <th className="pb-2 font-medium">Title</th>
-                    <th className="pb-2 font-medium">Course</th>
-                    <th className="pb-2 font-medium">Due</th>
-                    <th className="pb-2 font-medium">Status</th>
-                    <th className="pb-2 font-medium">Grade</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {schoolAssignments.map((a) => (
-                    <tr key={a.id} className="border-t border-neutral-100">
-                      <td className="py-3 text-neutral-800">{a.title}</td>
-                      <td className="py-3 text-neutral-500">{a.course}</td>
-                      <td className="py-3 text-neutral-500">{a.due}</td>
-                      <td className="py-3"><StatusPill status={a.status} /></td>
-                      <td className="py-3 text-neutral-500">{a.grade || "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-2 mt-4">
-                <input placeholder="Assignment title" value={newAssignment.title} onChange={(e) => setNewAssignment({ ...newAssignment, title: e.target.value })} className="flex-1 text-sm border border-neutral-200 rounded-lg px-3 py-2" />
-                <input placeholder="Course" value={newAssignment.course} onChange={(e) => setNewAssignment({ ...newAssignment, course: e.target.value })} className="sm:w-32 text-sm border border-neutral-200 rounded-lg px-3 py-2" />
-                <input type="date" value={newAssignment.due} onChange={(e) => setNewAssignment({ ...newAssignment, due: e.target.value })} className="text-sm border border-neutral-200 rounded-lg px-3 py-2" />
-                <button onClick={addAssignment} className="px-4 py-2 bg-lime-400 text-neutral-950 text-sm font-medium rounded-lg flex items-center justify-center gap-1"><Plus size={14} /> Add</button>
-              </div>
-            </SectionCard>}
-
-            {!coursePageCourse && <SectionCard title="Readings" right={<IdeaButton loading={ideasMutation.isPending && ideaResult?.section === "Readings"} onClick={() => askIdeas("Readings", JSON.stringify({ readings, schoolSub }))} />}>
-              <div className="flex flex-col">
-                {schoolReadings.map((r) => (
-                  <div key={r.id} className="flex items-center justify-between py-2.5 border-b border-neutral-100 last:border-0">
-                    <button
-                      onClick={() => setReadings(prev => prev.map(x => x.id !== r.id ? x : { ...x, done: !x.done }))}
-                      className="flex items-center gap-3"
-                    >
-                      <span className={`w-5 h-5 rounded-full flex items-center justify-center ${r.done ? "bg-emerald-400" : "border border-neutral-300"}`}>
-                        {r.done && <Check size={12} className="text-white" />}
-                      </span>
-                      <span className={`text-sm ${r.done ? "text-neutral-400 line-through" : "text-neutral-800"}`}>{r.title}</span>
-                    </button>
-                    <span className="text-xs text-neutral-400">{r.course}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="flex flex-col sm:flex-row gap-2 mt-4">
-                <input placeholder="Reading title" value={newReading.title} onChange={(e) => setNewReading({ ...newReading, title: e.target.value })} className="flex-1 text-sm border border-neutral-200 rounded-lg px-3 py-2" />
-                <input placeholder="Course" value={newReading.course} onChange={(e) => setNewReading({ ...newReading, course: e.target.value })} className="sm:w-32 text-sm border border-neutral-200 rounded-lg px-3 py-2" />
-                <button onClick={addReading} className="px-4 py-2 bg-lime-400 text-neutral-950 text-sm font-medium rounded-lg flex items-center justify-center gap-1"><Plus size={14} /> Add</button>
-              </div>
-            </SectionCard>}
           </div>
         )}
 
