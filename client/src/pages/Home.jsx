@@ -1,4 +1,4 @@
-import React, { forwardRef, useImperativeHandle, useState, useMemo, useRef, useEffect } from "react";
+import React, { forwardRef, useImperativeHandle, useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
@@ -6,8 +6,10 @@ import CalendarWorkspace from "@/components/CalendarWorkspace";
 import PinGate from "@/components/PinGate";
 import { WorkoutsHub } from "@/components/WorkoutsHub";
 import { GeorgetownSubpage, DEFAULT_GEORGETOWN_ITEMS } from "@/components/GeorgetownSubpage";
+import { GeorgetownCoursePage } from "@/components/GeorgetownCoursePage";
 import { EisenhowerMatrix } from "@/components/EisenhowerMatrix";
 import { VoiceAssistantDropdown } from "@/components/VoiceAssistantDropdown";
+import { FinanceHub } from "@/components/FinanceHub";
 import { applyIncomeReceipt, addIncomeExpected, applyDebtPayment, addDebtPrincipal, appendVoiceNote, buildFinanceInsights, applyVoiceActionToState, filterTodosForProject, calculateCompletionPercent, buildTodayCardItems, getDebtActionMeta } from "@shared/interactionHelpers";
 import { addRelationshipGoal, editRelationshipGoal, toggleRelationshipGoal, deleteRelationshipGoal } from "@shared/relationshipHelpers";
 import { buildVoiceFailureState, canSubmitVoiceDraft } from "@shared/voiceNoteHelpers";
@@ -107,17 +109,17 @@ function fmt(n) {
 function StatCard({ icon: Icon, iconColor, label, value, delta, positive }) {
   const c = colorMap[iconColor];
   return (
-    <div className="dashboard-card bg-white rounded-2xl p-4 sm:p-5 flex-1 min-w-[140px] border border-neutral-100/80 shadow-sm transition-all duration-200">
-      <div className="flex items-center justify-between mb-3 sm:mb-4">
-        <span className="text-xs sm:text-sm font-medium text-neutral-500">{label}</span>
-        <div className={`w-8 h-8 rounded-xl ${c.badgeBg} flex items-center justify-center shrink-0`}>
-          <Icon size={16} className={c.badgeText} />
+    <div className="dashboard-card bg-white rounded-xl sm:rounded-2xl p-3.5 sm:p-5 flex-1 min-w-[130px] border border-neutral-100/80 shadow-xs sm:shadow-sm transition-all duration-200">
+      <div className="flex items-center justify-between mb-2.5 sm:mb-4">
+        <span className="text-xs sm:text-sm font-medium text-neutral-500 truncate">{label}</span>
+        <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl ${c.badgeBg} flex items-center justify-center shrink-0`}>
+          <Icon size={15} className={c.badgeText} />
         </div>
       </div>
-      <div className="text-xl sm:text-2xl font-bold text-neutral-900 tracking-tight tabular-nums font-mono">{value}</div>
+      <div className="text-lg sm:text-2xl font-bold text-neutral-900 tracking-tight tabular-nums font-mono">{value}</div>
       {delta && (
-        <div className={`flex items-center gap-1 text-xs mt-2 font-medium ${positive ? "text-emerald-600" : "text-rose-600"}`}>
-          {positive ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
+        <div className={`flex items-center gap-1 text-[11px] sm:text-xs mt-1.5 sm:mt-2 font-medium ${positive ? "text-emerald-600" : "text-rose-600"}`}>
+          {positive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
           <span>{delta}</span>
         </div>
       )}
@@ -171,112 +173,18 @@ function ScoreRing({ label, score, colorKey }) {
 
 function SectionCard({ title, right, children }) {
   return (
-    <section className="dashboard-card bg-white rounded-2xl p-4 sm:p-6 border border-neutral-100/80 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4 sm:mb-5">
-        <h3 className="text-sm sm:text-base font-bold text-neutral-900 tracking-tight">{title}</h3>
-        {right && <div className="flex items-center gap-2 shrink-0">{right}</div>}
+    <section className="dashboard-card bg-white rounded-xl sm:rounded-2xl p-3.5 sm:p-5 md:p-6 border border-neutral-100/80 shadow-xs sm:shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 mb-3 sm:mb-4 md:mb-5">
+        <h3 className="text-xs sm:text-sm md:text-base font-bold text-neutral-900 tracking-tight">{title}</h3>
+        {right && <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">{right}</div>}
       </div>
       {children}
     </section>
   );
 }
 
-function GeorgetownCoursePage({
-  course,
-  items,
-  openItems,
-  doneCount,
-  performance,
-  average,
-  courseDraft,
-  setCourseDraft,
-  performanceDraft,
-  setPerformanceDraft,
-  onCycleItem,
-  onDeleteItem,
-  onAddItem,
-  onAddPerformance,
-  onDeletePerformance,
-  onBack,
-}) {
-  if (!course) return null;
-  return (
-    <div className="flex flex-col gap-5">
-      <button type="button" onClick={onBack} className="group inline-flex w-fit items-center gap-2 rounded-full bg-white px-3.5 py-2 text-xs font-semibold text-neutral-600 ring-1 ring-neutral-950/8 transition-[transform,background-color,color] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-x-0.5 hover:bg-neutral-950 hover:text-white">
-        <ChevronLeft size={14} /> Back to Georgetown
-      </button>
-
-      <section className="dashboard-card overflow-hidden rounded-[1.5rem] bg-white">
-        <div className="bg-neutral-950 p-5 text-white sm:p-7">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-lime-300">Georgetown · Fall 2026</p>
-              <h2 className="mt-2 max-w-2xl text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">{course.name}</h2>
-              <p className="mt-2 text-sm text-white/60">{course.professor || "Professor not added yet"}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
-              <div className="rounded-2xl bg-white/10 px-3.5 py-3"><p className="text-[10px] uppercase tracking-[0.12em] text-white/45">Open</p><p className="mt-1 text-lg font-semibold text-lime-300">{openItems.length}</p></div>
-              <div className="rounded-2xl bg-white/10 px-3.5 py-3"><p className="text-[10px] uppercase tracking-[0.12em] text-white/45">Complete</p><p className="mt-1 text-lg font-semibold">{doneCount}</p></div>
-              <div className="rounded-2xl bg-white/10 px-3.5 py-3"><p className="text-[10px] uppercase tracking-[0.12em] text-white/45">Average</p><p className="mt-1 text-lg font-semibold">{average === null ? "—" : `${average}%`}</p></div>
-            </div>
-          </div>
-          <div className="mt-6 grid gap-2 border-t border-white/10 pt-4 text-xs text-white/65 sm:grid-cols-2 lg:grid-cols-3">
-            <span className="inline-flex items-center gap-2"><Calendar size={13} className="text-lime-300" />{course.meetingDays} · {formatCourseTime(course.startTime)}–{formatCourseTime(course.endTime)}</span>
-            <span className="inline-flex items-center gap-2"><MapPin size={13} className="text-lime-300" />Room {course.room || "—"}</span>
-            <span className="inline-flex items-center gap-2"><RefreshCw size={13} className="text-lime-300" />Weekly · {formatCourseDate(course.startDate)}–{formatCourseDate(course.endDate)}</span>
-          </div>
-        </div>
-
-        <div className="grid gap-5 p-4 sm:p-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)]">
-          <section className="rounded-[1.25rem] bg-neutral-50 p-4 sm:p-5" aria-labelledby="course-followups-title">
-            <div className="flex items-start justify-between gap-3">
-              <div><p id="course-followups-title" className="text-sm font-semibold text-neutral-900">Course follow-ups</p><p className="mt-1 max-w-xl text-xs leading-5 text-neutral-500">Assignments, quizzes, exams, readings, study sessions, and the next action you need to remember.</p></div>
-              <span className="shrink-0 rounded-full bg-violet-50 px-2.5 py-1 text-[11px] font-semibold text-violet-700">{openItems.length} open</span>
-            </div>
-            {items.length ? (
-              <div className="mt-4 flex flex-col gap-2">
-                {items.map((item) => (
-                  <div key={item.id} className="flex items-start gap-2 rounded-xl bg-white p-3 ring-1 ring-neutral-950/5">
-                    <button type="button" onClick={() => onCycleItem(item.id)} className="min-w-0 flex-1 text-left" aria-label={`Cycle status for ${item.title}`}>
-                      <div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-neutral-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-500">{item.type}</span><StatusPill status={item.status} /></div>
-                      <p className={`mt-2 text-sm font-medium ${item.status === "Done" ? "text-neutral-400 line-through" : "text-neutral-800"}`}>{item.title}</p>
-                      <p className="mt-1 text-xs text-neutral-400">{item.date ? formatCourseDate(item.date) : "No date"}{item.time ? ` · ${formatCourseTime(item.time)}` : ""}{item.notes ? ` · ${item.notes}` : ""}</p>
-                    </button>
-                    <button type="button" onClick={() => onDeleteItem(item.id)} aria-label={`Delete ${item.title}`} className="rounded-full p-1.5 text-neutral-300 transition-colors duration-300 hover:bg-rose-50 hover:text-rose-500"><Trash2 size={14} /></button>
-                  </div>
-                ))}
-              </div>
-            ) : <p className="mt-4 rounded-xl bg-white p-4 text-xs leading-5 text-neutral-500 ring-1 ring-neutral-950/5">No course follow-ups yet. Add the first deadline or study block below.</p>}
-            <form onSubmit={(event) => { event.preventDefault(); onAddItem(); }} className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <select aria-label="Follow-up type" value={courseDraft.type} onChange={(event) => setCourseDraft({ ...courseDraft, type: event.target.value })} className="rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-700"><option>Assignment</option><option>Quiz</option><option>Exam</option><option>Study session</option><option>Reading</option><option>Follow-up</option></select>
-              <input aria-label="Follow-up title" value={courseDraft.title} onChange={(event) => setCourseDraft({ ...courseDraft, title: event.target.value })} placeholder="What needs follow-up?" className="rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-800" />
-              <input aria-label="Follow-up date" type="date" value={courseDraft.date} onChange={(event) => setCourseDraft({ ...courseDraft, date: event.target.value })} className="rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-700" />
-              <input aria-label="Follow-up time" type="time" value={courseDraft.time} onChange={(event) => setCourseDraft({ ...courseDraft, time: event.target.value })} className="rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-700" />
-              <input aria-label="Follow-up notes" value={courseDraft.notes} onChange={(event) => setCourseDraft({ ...courseDraft, notes: event.target.value })} placeholder="Notes or next action" className="rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-800 sm:col-span-2" />
-              <div className="flex justify-end sm:col-span-2"><button type="submit" className="inline-flex items-center gap-1.5 rounded-full bg-lime-400 px-4 py-2.5 text-xs font-semibold text-neutral-950 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-0.5 active:scale-[0.98]"><Plus size={14} /> Add follow-up</button></div>
-            </form>
-          </section>
-
-          <section className="rounded-[1.25rem] bg-[#f7f3ed] p-4 sm:p-5" aria-labelledby="course-performance-title">
-            <div className="flex items-start justify-between gap-3"><div><p id="course-performance-title" className="text-sm font-semibold text-neutral-900">Performance log</p><p className="mt-1 text-xs leading-5 text-neutral-500">Keep results and reflections together by course.</p></div><span className="text-lg font-semibold text-neutral-950">{average === null ? "—" : `${average}%`}</span></div>
-            {performance.length ? <div className="mt-4 flex flex-col gap-2">{performance.map((item) => <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2.5 ring-1 ring-neutral-950/5"><div className="min-w-0"><p className="truncate text-xs font-medium text-neutral-800">{item.title}</p><p className="mt-1 text-[11px] text-neutral-400">{item.date ? formatCourseDate(item.date) : "No date"}{item.notes ? ` · ${item.notes}` : ""}</p></div><div className="flex items-center gap-2"><span className="text-xs font-semibold text-neutral-700">{item.score}/{item.outOf}</span><button type="button" onClick={() => onDeletePerformance(item.id)} aria-label={`Delete ${item.title} result`} className="rounded-full p-1 text-neutral-300 hover:bg-rose-50 hover:text-rose-500"><Trash2 size={13} /></button></div></div>)}</div> : <p className="mt-4 rounded-xl bg-white p-4 text-xs leading-5 text-neutral-500 ring-1 ring-neutral-950/5">No results logged yet. Add quiz, exam, or assignment results as they come in.</p>}
-            <form onSubmit={(event) => { event.preventDefault(); onAddPerformance(); }} className="mt-4 grid grid-cols-2 gap-2">
-              <input aria-label="Result name" value={performanceDraft.title} onChange={(event) => setPerformanceDraft({ ...performanceDraft, title: event.target.value })} placeholder="Result name" className="col-span-2 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-800" />
-              <input aria-label="Score" type="number" min="0" value={performanceDraft.score} onChange={(event) => setPerformanceDraft({ ...performanceDraft, score: event.target.value })} placeholder="Score" className="rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-800" />
-              <input aria-label="Out of" type="number" min="1" value={performanceDraft.outOf} onChange={(event) => setPerformanceDraft({ ...performanceDraft, outOf: event.target.value })} placeholder="Out of" className="rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-800" />
-              <input aria-label="Result date" type="date" value={performanceDraft.date} onChange={(event) => setPerformanceDraft({ ...performanceDraft, date: event.target.value })} className="col-span-2 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-700" />
-              <input aria-label="Performance reflection" value={performanceDraft.notes} onChange={(event) => setPerformanceDraft({ ...performanceDraft, notes: event.target.value })} placeholder="Reflection (optional)" className="col-span-2 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-800" />
-              <div className="col-span-2 flex justify-end"><button type="submit" className="inline-flex items-center gap-1.5 rounded-full bg-neutral-950 px-4 py-2.5 text-xs font-semibold text-white transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-0.5 active:scale-[0.98]"><Plus size={14} /> Log result</button></div>
-            </form>
-          </section>
-        </div>
-      </section>
-    </div>
-  );
-}
-
 function IdeaButton({ onClick, loading = false }) {
-  return <button type="button" onClick={onClick} disabled={loading} className="inline-flex items-center gap-1 rounded-lg bg-neutral-100 px-2.5 py-1.5 text-[11px] font-medium text-neutral-600 transition-transform duration-150 active:scale-[0.97] disabled:opacity-50"><Sparkles size={12} />{loading ? "Thinking…" : "Ideas"}</button>;
+  return <button type="button" onClick={onClick} disabled={loading} className="dashboard-idea-button inline-flex items-center gap-1 rounded-lg bg-neutral-100 px-2.5 py-1.5 text-[11px] font-medium text-neutral-600 transition-transform duration-150 active:scale-[0.97] disabled:opacity-50"><Sparkles size={12} />{loading ? "Thinking…" : "Ideas"}</button>;
 }
 
 function ViewTabs({ views, active, onChange }) {
@@ -299,12 +207,12 @@ function ViewTabs({ views, active, onChange }) {
 
 function SubTabs({ tabs, active, onChange }) {
   return (
-    <div className="dashboard-tabbar flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 rounded-2xl">
+    <div className="dashboard-tabbar flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-1 rounded-xl sm:rounded-2xl">
       {tabs.map((t) => (
         <button
           key={t.key}
           onClick={() => onChange(t.key)}
-          className={`min-h-[38px] sm:min-h-[36px] px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
+          className={`min-h-[34px] sm:min-h-[36px] px-3 sm:px-4 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
             active === t.key ? "bg-neutral-950 text-white shadow-sm" : "bg-white/80 hover:bg-white text-neutral-600 border border-neutral-200/60"
           }`}
         >
@@ -792,13 +700,129 @@ export default function PersonalLifeOS() {
   }, [location]);
   const [tab, setTab] = useState(() => {
     if (typeof window === "undefined") return "home";
+    const path = window.location.pathname.replace(/^\/+|\/+$/g, "").toLowerCase();
+    if (path.startsWith("school")) return "school";
+    if (path.startsWith("health") || path === "fitness" || path === "workouts") return "health";
+    if (path.startsWith("finance")) return "finance";
+    if (path.startsWith("work")) return "work";
+    if (path.startsWith("relationships") || path.startsWith("people")) return "relationships";
+    if (path.startsWith("calendar")) return "calendar";
     const requested = new URLSearchParams(window.location.search).get("tab");
     return requested && (requested === "calendar" || domainMeta[requested]) ? requested : "home";
   });
-  const [homeSub, setHomeSub] = useState("dashboard");
-  const [healthSub, setHealthSub] = useState("fitness");
-  const [financeSub, setFinanceSub] = useState("income");
-  const [schoolSub, setSchoolSub] = useState("Georgetown");
+  const [homeSub, setHomeSub] = useState(() => {
+    if (typeof window === "undefined") return "dashboard";
+    const path = window.location.pathname.replace(/^\/+|\/+$/g, "").toLowerCase();
+    if (path === "today") return "today";
+    if (path === "matrix" || path === "eisenhower") return "matrix";
+    if (path === "todo") return "todo";
+    if (path === "upcoming") return "upcoming";
+    return "dashboard";
+  });
+  const [healthSub, setHealthSub] = useState(() => {
+    if (typeof window === "undefined") return "fitness";
+    const path = window.location.pathname.replace(/^\/+|\/+$/g, "").toLowerCase();
+    if (path.includes("sleep")) return "sleep";
+    if (path.includes("disease")) return "disease";
+    return "fitness";
+  });
+  const [financeSub, setFinanceSub] = useState(() => {
+    if (typeof window === "undefined") return "income";
+    const path = window.location.pathname.replace(/^\/+|\/+$/g, "").toLowerCase();
+    if (path.includes("debts") || path.includes("debt")) return "debts";
+    if (path.includes("insights")) return "insights";
+    return "income";
+  });
+  const [schoolSub, setSchoolSub] = useState(() => {
+    if (typeof window === "undefined") return "Georgetown";
+    const path = window.location.pathname.replace(/^\/+|\/+$/g, "").toLowerCase();
+    if (path.includes("masters")) return "Masters";
+    return "Georgetown";
+  });
+  const [relationshipsSub, setRelationshipsSub] = useState(() => {
+    if (typeof window === "undefined") return "Family";
+    const path = window.location.pathname.replace(/^\/+|\/+$/g, "").toLowerCase();
+    if (path.includes("friends")) return "Friends";
+    if (path.includes("other")) return "Other";
+    return "Family";
+  });
+
+  const handleTabChange = useCallback((nextTab, nextSub) => {
+    setTab(nextTab);
+    if (nextTab === "home") {
+      if (nextSub) setHomeSub(nextSub);
+      navigate(nextSub && nextSub !== "dashboard" ? `/${nextSub}` : "/");
+    } else if (nextTab === "health") {
+      if (nextSub) setHealthSub(nextSub);
+      navigate(nextSub && nextSub !== "fitness" ? `/health/${nextSub}` : "/health");
+    } else if (nextTab === "finance") {
+      if (nextSub) setFinanceSub(nextSub);
+      navigate(nextSub && nextSub !== "income" ? `/finance/${nextSub}` : "/finance");
+    } else if (nextTab === "school") {
+      if (nextSub) setSchoolSub(nextSub);
+      navigate(nextSub && nextSub !== "Georgetown" ? `/school/${nextSub.toLowerCase()}` : "/school");
+    } else if (nextTab === "relationships") {
+      if (nextSub) setRelationshipsSub(nextSub);
+      navigate(nextSub && nextSub !== "Family" ? `/relationships/${nextSub.toLowerCase()}` : "/relationships");
+    } else if (nextTab === "calendar") {
+      navigate("/calendar");
+    } else {
+      navigate(`/${nextTab}`);
+    }
+  }, [navigate]);
+
+  // Keep state in sync with browser navigation (Back / Forward / direct URL)
+  useEffect(() => {
+    if (!location) return;
+    if (location.startsWith("/school/georgetown/")) {
+      setTab("school");
+      setSchoolSub("Georgetown");
+      return;
+    }
+    const cleanPath = location.replace(/^\/+|\/+$/g, "").toLowerCase();
+    if (!cleanPath || cleanPath === "dashboard") {
+      setTab("home");
+      setHomeSub("dashboard");
+    } else if (cleanPath === "today") {
+      setTab("home");
+      setHomeSub("today");
+    } else if (cleanPath === "matrix" || cleanPath === "eisenhower") {
+      setTab("home");
+      setHomeSub("matrix");
+    } else if (cleanPath === "todo") {
+      setTab("home");
+      setHomeSub("todo");
+    } else if (cleanPath === "upcoming") {
+      setTab("home");
+      setHomeSub("upcoming");
+    } else if (cleanPath.startsWith("health")) {
+      setTab("health");
+      if (cleanPath.includes("sleep")) setHealthSub("sleep");
+      else if (cleanPath.includes("disease")) setHealthSub("disease");
+      else setHealthSub("fitness");
+    } else if (cleanPath === "fitness" || cleanPath === "workouts") {
+      setTab("health");
+      setHealthSub("fitness");
+    } else if (cleanPath.startsWith("finance")) {
+      setTab("finance");
+      if (cleanPath.includes("debts") || cleanPath.includes("debt")) setFinanceSub("debts");
+      else if (cleanPath.includes("insights")) setFinanceSub("insights");
+      else setFinanceSub("income");
+    } else if (cleanPath.startsWith("work")) {
+      setTab("work");
+    } else if (cleanPath.startsWith("school")) {
+      setTab("school");
+      if (cleanPath.includes("masters")) setSchoolSub("Masters");
+      else setSchoolSub("Georgetown");
+    } else if (cleanPath.startsWith("relationships") || cleanPath.startsWith("people")) {
+      setTab("relationships");
+      if (cleanPath.includes("friends")) setRelationshipsSub("Friends");
+      else if (cleanPath.includes("other")) setRelationshipsSub("Other");
+      else setRelationshipsSub("Family");
+    } else if (cleanPath.startsWith("calendar")) {
+      setTab("calendar");
+    }
+  }, [location]);
   const today = new Date().toISOString().slice(0, 10);
   const formattedToday = new Date(`${today}T00:00:00`).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
   const todayCategories = [
@@ -850,15 +874,11 @@ export default function PersonalLifeOS() {
     ideasMutation.mutate({ section, context }, { onSuccess: (data) => setIdeaResult({ section, text: data.text }), onError: () => setIdeaResult({ section, text: "I couldn’t generate ideas right now. Please try again." }) });
   }
   function openNotification(target, sub) {
-    setTab(target);
-    if (target === "home" && sub) setHomeSub(sub);
-    if (target === "school" && sub && ["Georgetown", "Masters"].includes(sub)) setSchoolSub(sub);
-    if (target === "finance" && sub && ["income", "debts"].includes(sub)) setFinanceSub(sub);
-    if (target === "relationships" && sub && ["Family", "Friends", "Other"].includes(sub)) setRelationshipsSub(sub);
     if (target === "work" && sub) {
       const project = projects.find((p) => p.name === sub);
       if (project) setActiveProject(project.id);
     }
+    handleTabChange(target, sub);
     setShowNotifications(false);
   }
   function notificationTargetForTodo(todo) {
@@ -1314,7 +1334,7 @@ export default function PersonalLifeOS() {
     if (String(selectedCourseId) === String(id)) setSelectedCourseId(georgetownClassDefaults[0].id);
   }
   function addCourseItem() {
-    const course = classes.find((item) => String(item.id) === String(selectedCourseId));
+    const course = coursePageCourse || classes.find((item) => String(item.id) === String(selectedCourseId));
     const title = courseDraft.title.trim();
     if (!course || !title) return;
     const id = `academic-${Date.now()}`;
@@ -1338,7 +1358,7 @@ export default function PersonalLifeOS() {
     setTodos((prev) => prev.filter((todo) => String(todo.academicItemId) !== String(id)));
   }
   function addCoursePerformance() {
-    const course = classes.find((item) => String(item.id) === String(selectedCourseId));
+    const course = coursePageCourse || classes.find((item) => String(item.id) === String(selectedCourseId));
     const title = performanceDraft.title.trim();
     const score = Number(performanceDraft.score);
     const outOf = Number(performanceDraft.outOf);
@@ -1362,7 +1382,7 @@ export default function PersonalLifeOS() {
     setSyllabusEvents((prev) => prev.filter((e) => e.id !== id));
   }
   const upcomingSyllabusEvents = [...syllabusEvents].sort((a, b) => new Date(a.date) - new Date(b.date));
-  const selectedCourse = classes.find((item) => String(item.id) === String(selectedCourseId)) || classes[0] || null;
+  const selectedCourse = coursePageCourse || classes.find((item) => String(item.id) === String(selectedCourseId)) || classes[0] || null;
   const selectedCourseItems = courseItems.filter((item) => selectedCourse && String(item.courseId) === String(selectedCourse.id)).sort((a, b) => String(a.date || "9999-12-31").localeCompare(String(b.date || "9999-12-31")));
   const selectedCourseOpenItems = selectedCourseItems.filter((item) => item.status !== "Done");
   const selectedCourseDoneCount = selectedCourseItems.filter((item) => item.status === "Done").length;
@@ -1462,7 +1482,6 @@ export default function PersonalLifeOS() {
   const todayOverall = Math.round(todayCategories.reduce((sum, category) => sum + calculateCompletionPercent(todayCardItems[category.key] || []), 0) / todayCategories.length);
 
   // Relationships
-  const [relationshipsSub, setRelationshipsSub] = useState("Family");
   const [people, setPeople] = useState([
     { id: 1, name: "Mom", type: "Family", lastContacted: "2026-08-25", threshold: 7, goals: [], notes: "", talkingPoints: [], activity: [] },
     { id: 2, name: "Elvin", type: "Friend", lastContacted: "2026-08-10", threshold: 14, goals: [], notes: "", talkingPoints: [], activity: [] },
@@ -2014,7 +2033,6 @@ export default function PersonalLifeOS() {
     { key: "work", icon: Briefcase, label: "Work" },
     { key: "school", icon: GraduationCap, label: "School" },
     { key: "relationships", icon: Users, label: "People" },
-    { key: "calendar", icon: Calendar, label: "Calendar" },
   ];
 
   useEffect(() => {
@@ -2127,7 +2145,7 @@ export default function PersonalLifeOS() {
         {navItems.map(({ key, icon: Icon }) => (
           <button
             key={key}
-            onClick={() => setTab(key)}
+            onClick={() => handleTabChange(key)}
             className={`w-11 h-11 rounded-2xl flex items-center justify-center transition ${
               tab === key ? "bg-lime-400 text-neutral-950" : "text-neutral-500 hover:text-neutral-300"
             }`}
@@ -2138,16 +2156,16 @@ export default function PersonalLifeOS() {
       </nav>
 
       {/* dock — mobile only */}
-      <MobileDock items={navItems} active={tab} onChange={setTab} onVoice={openMobileVoice} voiceRecording={mobileVoiceRecording} />
+      <MobileDock items={navItems} active={tab} onChange={handleTabChange} onVoice={openMobileVoice} voiceRecording={mobileVoiceRecording} />
 
       {/* main */}
-      <main id="main-content" className="dashboard-main flex-1 md:ml-20 p-4 md:p-6 overflow-y-auto pb-28 md:pb-6 min-w-0">
-        <div className="dashboard-topbar flex items-center justify-between mb-6 gap-4">
+      <main id="main-content" className="dashboard-main flex-1 md:ml-20 p-3 sm:p-4 md:p-6 overflow-y-auto pb-24 md:pb-6 min-w-0">
+        <div className="dashboard-topbar flex items-center justify-between mb-4 sm:mb-6 gap-2 sm:gap-4">
           <div className="min-w-0">
-            <h1 className="text-lg md:text-xl font-semibold text-neutral-900">
+            <h1 className="text-base sm:text-lg md:text-xl font-bold text-neutral-900 truncate">
               {tab === "home" ? "Good morning" : domainMeta[tab]?.label}
             </h1>
-            <p className="text-sm text-neutral-500">
+            <p className="text-xs sm:text-sm text-neutral-500 truncate">
               {tab === "home" ? "Here's where things stand across your week." : formattedToday}
             </p>
           </div>
@@ -2155,21 +2173,71 @@ export default function PersonalLifeOS() {
             <div className="dashboard-mini-stat"><span className="dashboard-mini-stat-value">{tab === "home" ? `${overall}%` : tab === "health" ? `${Math.round(goalProgress)}%` : tab === "finance" ? fmt(netPosition) : tab === "work" ? `${unfinishedTodos.length}` : `${upcomingTodos.length}`}</span><span className="dashboard-mini-stat-label">{tab === "home" ? "life score" : tab === "health" ? "goal progress" : tab === "finance" ? "net position" : tab === "work" ? "open tasks" : "up next"}</span></div>
             <div className="dashboard-mini-stat"><span className="dashboard-mini-stat-value">{tab === "home" ? `${todayOverall}%` : tab === "health" ? `${currentWeight}kg` : tab === "finance" ? fmt(totalOutstandingDebt) : `${todayTodos.filter((item) => !item.done).length}`}</span><span className="dashboard-mini-stat-label">{tab === "home" ? "today" : tab === "health" ? "current weight" : tab === "finance" ? "outstanding" : "today open"}</span></div>
           </div>
-          <div className="dashboard-header-actions flex items-center gap-3 shrink-0">
+          <div className="dashboard-header-actions flex items-center gap-1.5 sm:gap-3 shrink-0">
             {tab !== "home" && <IdeaButton loading={ideasMutation.isPending && ideaResult?.section === (domainMeta[tab]?.label || tab)} onClick={() => askIdeas(domainMeta[tab]?.label || tab, JSON.stringify({ tab, todos, income: incomeRows, debts: debtRows, applications, assignments, people }))} />}
-            <button type="button" aria-label="Open voice log" onClick={() => setShowGlobalVoiceLog(true)} className={`dashboard-action relative w-9 h-9 rounded-full flex items-center justify-center ${voiceLoading ? "bg-lime-400 text-neutral-950" : "bg-white text-neutral-500"}`}>
+            <button type="button" aria-label="Open voice log" onClick={() => setShowGlobalVoiceLog(true)} className={`dashboard-action relative w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${voiceLoading ? "bg-lime-400 text-neutral-950" : "bg-white text-neutral-500 hover:text-neutral-900 border border-neutral-200/80 shadow-xs"}`}>
               {voiceLoading ? <span className="absolute inset-0 rounded-full border-2 border-neutral-950/20 border-t-neutral-950 animate-spin" /> : null}
-              <Mic size={16} className="relative" />
+              <Mic size={15} className="relative" />
             </button>
+
+            {/* Calendar button pinned to topbar alongside notifications */}
+            <button
+              type="button"
+              onClick={() => handleTabChange("calendar")}
+              aria-label="Open Calendar"
+              title="Calendar"
+              className={`dashboard-action relative w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${
+                tab === "calendar"
+                  ? "bg-lime-400 text-neutral-950 shadow-sm ring-2 ring-lime-400/40"
+                  : "bg-white text-neutral-600 hover:text-neutral-900 border border-neutral-200/80 shadow-xs"
+              }`}
+            >
+              <Calendar size={15} />
+            </button>
+
+            {/* Notifications button */}
             <div className="relative">
-              <button onClick={() => setShowNotifications((v) => !v)} aria-label="Notifications" className="w-9 h-9 rounded-full bg-white flex items-center justify-center">
-                <Bell size={16} className="text-neutral-400" />
+              <button
+                onClick={() => setShowNotifications((v) => !v)}
+                aria-label="Notifications"
+                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${
+                  showNotifications
+                    ? "bg-stone-100 text-neutral-950 border border-neutral-300"
+                    : "bg-white text-neutral-500 hover:text-neutral-900 border border-neutral-200/80 shadow-xs"
+                }`}
+              >
+                <Bell size={15} />
               </button>
-              {(nudges.length > 0) && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-lime-400 text-[10px] text-neutral-950 flex items-center justify-center">{nudges.length}</span>}
-              {showNotifications && <div className="absolute right-0 top-11 z-30 w-72 rounded-2xl bg-white p-4 shadow-xl border border-neutral-100">
-                <div className="flex items-center justify-between mb-3"><p className="text-sm font-semibold text-neutral-900">Notifications</p><button onClick={() => setShowNotifications(false)} className="text-xs text-neutral-400">Close</button></div>
-                <div className="flex flex-col gap-2">{nudges.length === 0 && upcomingTodos.length === 0 && <div className="rounded-xl bg-neutral-50 px-3 py-3 text-xs text-neutral-500">You’re all caught up. No new notifications.</div>}{nudges.map((n, i) => <button type="button" key={i} onClick={() => openNotification(n.target, n.sub)} className="text-left rounded-xl bg-lime-50 px-3 py-2 text-xs text-lime-900 transition-transform duration-150 hover:-translate-y-0.5 active:scale-[0.99]">{n.text}<span className="block text-[10px] text-lime-700 mt-0.5">Open {domainMeta[n.target]?.label || n.target}</span></button>)}{upcomingTodos.slice(0, 3).map((t) => <button type="button" key={t.id} onClick={() => { const destination = notificationTargetForTodo(t); openNotification(destination.target, destination.sub); }} className="text-left rounded-xl bg-neutral-50 px-3 py-2 text-xs text-neutral-700 transition-transform duration-150 hover:-translate-y-0.5 active:scale-[0.99]">Upcoming: {t.text} · {t.due}<span className="block text-[10px] text-neutral-400 mt-0.5">Open related section</span></button>)}</div>
-              </div>}
+              {(nudges.length > 0) && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-lime-400 text-[10px] font-bold text-neutral-950 flex items-center justify-center shadow-xs">
+                  {nudges.length}
+                </span>
+              )}
+              {showNotifications && (
+                <div className="absolute right-0 top-11 z-30 w-72 rounded-2xl bg-white p-4 shadow-xl border border-neutral-100">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-semibold text-neutral-900">Notifications</p>
+                    <button onClick={() => setShowNotifications(false)} className="text-xs text-neutral-400 hover:text-neutral-700">Close</button>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {nudges.length === 0 && upcomingTodos.length === 0 && (
+                      <div className="rounded-xl bg-neutral-50 px-3 py-3 text-xs text-neutral-500">You’re all caught up. No new notifications.</div>
+                    )}
+                    {nudges.map((n, i) => (
+                      <button type="button" key={i} onClick={() => openNotification(n.target, n.sub)} className="text-left rounded-xl bg-lime-50 px-3 py-2 text-xs text-lime-900 transition-transform duration-150 hover:-translate-y-0.5 active:scale-[0.99]">
+                        {n.text}
+                        <span className="block text-[10px] text-lime-700 mt-0.5">Open {domainMeta[n.target]?.label || n.target}</span>
+                      </button>
+                    ))}
+                    {upcomingTodos.slice(0, 3).map((t) => (
+                      <button type="button" key={t.id} onClick={() => { const destination = notificationTargetForTodo(t); openNotification(destination.target, destination.sub); }} className="text-left rounded-xl bg-neutral-50 px-3 py-2 text-xs text-neutral-700 transition-transform duration-150 hover:-translate-y-0.5 active:scale-[0.99]">
+                        Upcoming: {t.text} · {t.due}
+                        <span className="block text-[10px] text-neutral-400 mt-0.5">Open related section</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -2185,7 +2253,10 @@ export default function PersonalLifeOS() {
                 { key: "upcoming", label: "Upcoming" },
               ]}
               active={homeSub}
-              onChange={setHomeSub}
+              onChange={(nextSub) => {
+                setHomeSub(nextSub);
+                navigate(nextSub === "dashboard" ? "/" : `/${nextSub}`);
+              }}
             />
 
             {homeSub === "matrix" && (
@@ -2325,12 +2396,16 @@ export default function PersonalLifeOS() {
                         const completed = items.filter((item) => item.done).length;
                         const progress = calculateCompletionPercent(items);
                         return (
-                          <div key={category.key} className="reference-task-row">
+                          <div
+                            key={category.key}
+                            onClick={() => handleTabChange(category.domain)}
+                            className="reference-task-row cursor-pointer"
+                          >
                             <div className="reference-task-icon"><Icon size={18} /></div>
                             <div className="reference-task-copy min-w-0"><p className="font-semibold text-neutral-900">{category.label}</p><p className="truncate text-xs text-neutral-500">{firstItem.text}</p></div>
                             <span className="hidden sm:inline text-xs text-neutral-400">{firstItem.time || `${items.length} item${items.length === 1 ? "" : "s"}`}</span>
                             <ScoreRing label="" score={progress} colorKey={category.color} />
-                            <button type="button" onClick={() => setTab(category.domain)} className="reference-row-action">{firstItem.done ? "View" : "Open"}</button>
+                            <button type="button" onClick={(e) => { e.stopPropagation(); handleTabChange(category.domain); }} className="reference-row-action">{firstItem.done ? "View" : "Open"}</button>
                           </div>
                         );
                       })}
@@ -2450,171 +2525,24 @@ export default function PersonalLifeOS() {
         )}
 
         {tab === "finance" && (
-          <div className="flex flex-col gap-5">
-            <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
-              <StatCard icon={Wallet} iconColor="blue" label="Total expected income" value={fmt(totalExpectedIncome)} delta="+1.3% vs last month" positive />
-              <StatCard icon={AlertTriangle} iconColor="rose" label="Total outstanding debt" value={fmt(totalOutstandingDebt)} delta="-2.1% vs last month" />
-              <StatCard icon={TrendingUp} iconColor="emerald" label="Net position" value={fmt(netPosition)} />
-            </div>
-
-            <SubTabs
-              tabs={[{ key: "insights", label: "Insights" }, { key: "income", label: "Income" }, { key: "debts", label: "Debts" }]}
-              active={financeSub}
-              onChange={setFinanceSub}
-            />
-
-            {financeSub === "insights" && (
-              <div className="flex flex-col gap-5">
-                <SectionCard title="Finance insights" right={<IdeaButton loading={ideasMutation.isPending && ideaResult?.section === "Finance insights"} onClick={() => askIdeas("Finance insights", JSON.stringify({ insights: financeInsights, income: incomeRows, debts: debtRows }))} />}>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="rounded-xl bg-blue-50 p-4"><p className="text-xs text-blue-600">Collection rate</p><p className="text-2xl font-semibold text-neutral-900 mt-1">{financeInsights.collectionRate}%</p><p className="text-xs text-neutral-500 mt-1">{fmt(financeInsights.received)} received of {fmt(financeInsights.expected)}</p></div>
-                    <div className="rounded-xl bg-rose-50 p-4"><p className="text-xs text-rose-600">Debt coverage</p><p className="text-2xl font-semibold text-neutral-900 mt-1">{financeInsights.coverage}%</p><p className="text-xs text-neutral-500 mt-1">Received income compared with active debt</p></div>
-                    <div className="rounded-xl bg-emerald-50 p-4"><p className="text-xs text-emerald-600">Outstanding debt</p><p className="text-2xl font-semibold text-neutral-900 mt-1">{fmt(financeInsights.outstandingDebt)}</p><p className="text-xs text-neutral-500 mt-1">Across active balances</p></div>
-                  </div>
-                </SectionCard>
-                <SectionCard title="Recommended next actions">
-                  <div className="flex flex-col gap-3">{financeInsights.actions.map((action) => <div key={action} className="flex items-start gap-3 text-sm text-neutral-700"><span className="mt-1 h-2 w-2 rounded-full bg-lime-400 shrink-0" />{action}</div>)}</div>
-                </SectionCard>
-                <SectionCard title="Voice update inbox" right={<IdeaButton loading={ideasMutation.isPending && ideaResult?.section === "Voice update inbox"} onClick={() => askIdeas("Voice update inbox", JSON.stringify({ voiceLog }))} />}>
-                  <VoiceNoteBox onSubmit={processVoiceNote} loading={voiceLoading} placeholder="Say what changed in your money, work, health, or plans…" />
-                  <p className="text-xs text-neutral-400 mt-3">The assistant will suggest safe updates first, then apply them to the relevant tracker fields.</p>
-                </SectionCard>
-              </div>
-            )}
-
-            {financeSub === "income" && (
-            <SectionCard title="Income tracker" right={<div className="flex items-center gap-2"><IdeaButton loading={ideasMutation.isPending && ideaResult?.section === "Income"} onClick={() => askIdeas("Income", JSON.stringify({ income: incomeRows }))} /><ViewTabs views={["Expected", "Received", "All Incoming", "By Date"]} active={incomeView} onChange={setIncomeView} /></div>}>
-              <div className="overflow-x-auto">
-              <table className="w-full min-w-[560px] text-sm">
-                <thead>
-                  <tr className="text-left text-neutral-400 text-xs">
-                    <th className="pb-2 font-medium">Income source</th>
-                    <th className="pb-2 font-medium">To receive</th>
-                    <th className="pb-2 font-medium">Paid</th>
-                    <th className="pb-2 font-medium">Remaining</th>
-                    <th className="pb-2 font-medium">Date</th>
-                    <th className="pb-2 font-medium">From</th>
-                    <th className="pb-2 font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredIncome.map((r) => (
-                    <tr key={r.id} className="border-t border-neutral-100">
-                      <td className="py-3 text-neutral-800"><div>{r.source}</div><div className="flex gap-1 mt-1"><button onClick={() => receiveIncome(r.id)} className="text-[11px] text-emerald-600">Receive</button><button onClick={() => addIncomeAmount(r.id)} className="text-[11px] text-blue-600">Add on</button></div></td>
-                      <td className="py-3 text-neutral-600">{fmt(r.toReceive)}</td>
-                      <td className="py-3 text-neutral-600">{fmt(r.paid)}</td>
-                      <td className="py-3 text-neutral-600">{fmt(r.remaining)}</td>
-                      <td className="py-3 text-neutral-500">{r.date}</td>
-                      <td className="py-3 text-neutral-500">{r.from}</td>
-                      <td className="py-3"><StatusPill status={r.status} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-2 mt-4">
-                <input placeholder="Income source" value={newIncome.source} onChange={(e) => setNewIncome({ ...newIncome, source: e.target.value })} className="flex-1 text-sm border border-neutral-200 rounded-lg px-3 py-2" />
-                <input placeholder="Amount" value={newIncome.toReceive} onChange={(e) => setNewIncome({ ...newIncome, toReceive: e.target.value })} className="w-32 text-sm border border-neutral-200 rounded-lg px-3 py-2" />
-                <input placeholder="From" value={newIncome.from} onChange={(e) => setNewIncome({ ...newIncome, from: e.target.value })} className="w-28 text-sm border border-neutral-200 rounded-lg px-3 py-2" />
-                <button
-                  onClick={() => {
-                    if (!newIncome.source || !newIncome.toReceive) return;
-                    setIncome([...income, { id: Date.now(), source: newIncome.source, toReceive: Number(newIncome.toReceive), paid: 0, date: "2026-08-28", from: newIncome.from || "Other" }]);
-                    setNewIncome({ source: "", toReceive: "", from: "" });
-                  }}
-                  className="px-4 py-2 bg-lime-400 text-neutral-950 text-sm font-medium rounded-lg flex items-center gap-1"
-                >
-                  <Plus size={14} /> Add
-                </button>
-              </div>
-            </SectionCard>
-            )}
-
-            {financeSub === "debts" && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <div className="md:col-span-2">
-                <SectionCard title="Debt tracker" right={<div className="flex items-center gap-2"><IdeaButton loading={ideasMutation.isPending && ideaResult?.section === "Debt"} onClick={() => askIdeas("Debt", JSON.stringify({ debts: debtRows }))} /><ViewTabs views={["Table", "Active", "Paid"]} active={debtView} onChange={setDebtView} /></div>}>
-                  <div className="overflow-x-auto">
-                  <table className="w-full min-w-[480px] text-sm">
-                    <thead>
-                      <tr className="text-left text-neutral-400 text-xs">
-                        <th className="pb-2 font-medium">Name</th>
-                        <th className="pb-2 font-medium">Debt</th>
-                        <th className="pb-2 font-medium">Paid</th>
-                        <th className="pb-2 font-medium">Balance</th>
-                        <th className="pb-2 font-medium">Date</th>
-                        <th className="pb-2 font-medium">Status</th>
-                        <th className="pb-2 font-medium text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredDebts.map((d) => (
-                        <tr key={d.id} className="border-t border-neutral-100">
-                          <td className="py-3 text-neutral-800"><div className="font-medium">{d.name}</div><div className="text-[11px] text-neutral-400 mt-1">Added {d.date}</div></td>
-                          <td className="py-3 text-neutral-600">{fmt(d.debt)}</td>
-                          <td className="py-3 text-neutral-600">{fmt(d.paid)}</td>
-                          <td className="py-3"><div className="font-semibold tabular-nums text-neutral-900">{fmt(d.balance)}</div><div className="mt-1 text-[11px] text-neutral-400">remaining</div></td>
-                          <td className="py-3 text-neutral-500">{d.date}</td>
-                          <td className="py-3">
-                            <button type="button" onClick={() => setDebts(prev => prev.map(x => x.id !== d.id ? x : { ...x, status: x.status === "Active" ? "Paid" : "Active" }))} aria-label={`Mark ${d.name} as ${d.status === "Active" ? "paid" : "active"}`}>
-                              <StatusPill status={d.status} />
-                            </button>
-                          </td>
-                          <td className="py-3">
-                            <div className="flex justify-end gap-2">
-                              <button type="button" onClick={() => setDebtAction({ id: d.id, type: "pay", amount: "" })} aria-label={`${getDebtActionMeta("pay").label} for ${d.name}`} title={getDebtActionMeta("pay").description} className="rounded-xl bg-emerald-50 px-3 py-2 text-[11px] font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 active:scale-[0.98]">{getDebtActionMeta("pay").label}</button>
-                              <button type="button" onClick={() => setDebtAction({ id: d.id, type: "add", amount: "" })} aria-label={`${getDebtActionMeta("add").label} for ${d.name}`} title={getDebtActionMeta("add").description} className="rounded-xl bg-rose-50 px-3 py-2 text-[11px] font-semibold text-rose-700 transition-colors hover:bg-rose-100 active:scale-[0.98]">{getDebtActionMeta("add").label}</button>
-                            </div>
-                            {debtAction?.id === d.id && (
-                              <div className="mt-2 rounded-xl border border-neutral-100 bg-neutral-50 p-2.5">
-                                <p className="mb-2 text-right text-[11px] leading-4 text-neutral-500">{getDebtActionMeta(debtAction.type).description}</p>
-                                <div className="flex items-center justify-end gap-2">
-                                  <input autoFocus type="number" min="1" value={debtAction.amount} onChange={(e) => setDebtAction((prev) => ({ ...prev, amount: e.target.value }))} onKeyDown={(e) => { if (e.key === "Enter") submitDebtAction(); if (e.key === "Escape") setDebtAction(null); }} placeholder={getDebtActionMeta(debtAction.type).placeholder} aria-label={`${getDebtActionMeta(debtAction.type).amountLabel} for ${d.name}`} className="w-36 rounded-lg border border-neutral-200 bg-white px-2.5 py-2 text-xs" />
-                                  <button type="button" onClick={submitDebtAction} className="rounded-lg bg-neutral-950 px-2.5 py-2 text-[11px] font-medium text-white">Save</button>
-                                  <button type="button" onClick={() => setDebtAction(null)} className="rounded-lg bg-white px-2.5 py-2 text-[11px] font-medium text-neutral-600 ring-1 ring-neutral-200">Cancel</button>
-                                </div>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-2 mt-4">
-                    <input placeholder="Name" value={newDebt.name} onChange={(e) => setNewDebt({ ...newDebt, name: e.target.value })} className="flex-1 text-sm border border-neutral-200 rounded-lg px-3 py-2" />
-                    <input placeholder="Amount" value={newDebt.debt} onChange={(e) => setNewDebt({ ...newDebt, debt: e.target.value })} className="sm:w-32 text-sm border border-neutral-200 rounded-lg px-3 py-2" />
-                    <button onClick={addDebt} className="px-4 py-2 bg-lime-400 text-neutral-950 text-sm font-medium rounded-lg flex items-center justify-center gap-1"><Plus size={14} /> Add</button>
-                  </div>
-                </SectionCard>
-              </div>
-              <SectionCard title="Active balance" right={<IdeaButton loading={ideasMutation.isPending && ideaResult?.section === "Active balance"} onClick={() => askIdeas("Active balance", JSON.stringify({ debts: debtRows, income: incomeRows }))} />}>
-                <div style={{ height: 180 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={debtChartData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={75} paddingAngle={2}>
-                        {debtChartData.map((_, i) => <Cell key={i} fill={pieColors[i % pieColors.length]} />)}
-                      </Pie>
-                      <Tooltip formatter={(v) => fmt(v)} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <p className="text-center text-lg font-semibold text-neutral-900 -mt-24 mb-16">{fmt(totalOutstandingDebt)}</p>
-                <div className="flex flex-col gap-1 mt-2">
-                  {debtChartData.map((d, i) => (
-                    <div key={i} className="flex items-center justify-between text-xs">
-                      <span className="flex items-center gap-2 text-neutral-600">
-                        <span className="w-2 h-2 rounded-full" style={{ background: pieColors[i % pieColors.length] }} />
-                        {d.name}
-                      </span>
-                      <span className="text-neutral-400">{fmt(d.value)}</span>
-                    </div>
-                  ))}
-                </div>
-              </SectionCard>
-            </div>
-            )}
-          </div>
+          <FinanceHub
+            income={income}
+            setIncome={setIncome}
+            debts={debts}
+            setDebts={setDebts}
+            financeSub={financeSub}
+            setFinanceSub={setFinanceSub}
+            navigate={navigate}
+            fmt={fmt}
+            financeInsights={financeInsights}
+            ideasMutation={ideasMutation}
+            ideaResult={ideaResult}
+            askIdeas={askIdeas}
+            VoiceNoteBox={VoiceNoteBox}
+            processVoiceNote={processVoiceNote}
+            voiceLoading={voiceLoading}
+            voiceLog={voiceLog}
+          />
         )}
 
         {tab === "health" && (
@@ -2622,7 +2550,10 @@ export default function PersonalLifeOS() {
             <SubTabs
               tabs={[{ key: "fitness", label: "Fitness" }, { key: "sleep", label: "Sleep" }, { key: "disease", label: "Disease control" }]}
               active={healthSub}
-              onChange={setHealthSub}
+              onChange={(nextSub) => {
+                setHealthSub(nextSub);
+                navigate(nextSub === "fitness" ? "/health" : `/health/${nextSub}`);
+              }}
             />
 
             {healthSub === "fitness" && (
@@ -2641,6 +2572,12 @@ export default function PersonalLifeOS() {
                   }}
                   workouts={workouts}
                   liftLog={liftLog}
+                  onSaveExerciseWeight={(exId, weight) => {
+                    setLiftLog((prev) => [
+                      { id: Date.now(), exercise: exId, weight: Number(weight), reps: 10, sets: 4, date: today },
+                      ...(prev || []),
+                    ]);
+                  }}
                   onFinishWorkoutSession={(summary) => {
                     // Add to workouts log
                     setWorkouts((prev) => [
@@ -2664,8 +2601,20 @@ export default function PersonalLifeOS() {
                     }
                   }}
                 />
-                <SectionCard title="Weight trend & strength progress" right={<IdeaButton loading={ideasMutation.isPending && ideaResult?.section === "Progress"} onClick={() => askIdeas("Progress", JSON.stringify({ weight, liftLog }))} />}>
-                  <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-6"><div style={{ height: 220 }}><ResponsiveContainer width="100%" height="100%"><LineChart data={weight}><CartesianGrid stroke="#F5F5F4" vertical={false} /><XAxis dataKey="date" tick={{ fontSize: 11, fill: "#A3A3A3" }} axisLine={false} tickLine={false} /><YAxis domain={["auto", "auto"]} tick={{ fontSize: 11, fill: "#A3A3A3" }} axisLine={false} tickLine={false} /><Tooltip /><Line type="monotone" dataKey="weight" stroke="#34D399" strokeWidth={2} dot={{ r: 3 }} /></LineChart></ResponsiveContainer></div><div><div className="mb-3 flex items-center justify-between"><div><p className="text-sm font-semibold text-neutral-950">Lift log</p><p className="text-xs text-neutral-500">Compare load × reps over time</p></div><span className="rounded-full bg-lime-50 px-2.5 py-1 text-xs font-medium text-lime-700">{liftLog.length} entries</span></div><div className="max-h-48 overflow-y-auto">{liftLog.map((lift) => <div key={lift.id} className="flex items-center justify-between border-t border-neutral-100 py-2.5"><div><p className="text-sm font-medium text-neutral-800">{lift.exercise}</p><p className="text-xs text-neutral-400">{lift.date} · {lift.sets} sets × {lift.reps} reps</p></div><span className="text-sm font-semibold tabular-nums text-neutral-700">{lift.load}{lift.unit}</span></div>)}</div><div className="mt-4 grid grid-cols-2 gap-2"><input placeholder="Exercise" value={newLift.exercise} onChange={(e) => setNewLift({ ...newLift, exercise: e.target.value })} className="rounded-xl border border-neutral-200 px-3 py-2 text-sm" /><input type="number" placeholder="Load kg" value={newLift.load} onChange={(e) => setNewLift({ ...newLift, load: e.target.value })} className="rounded-xl border border-neutral-200 px-3 py-2 text-sm" /><input type="number" placeholder="Reps" value={newLift.reps} onChange={(e) => setNewLift({ ...newLift, reps: e.target.value })} className="rounded-xl border border-neutral-200 px-3 py-2 text-sm" /><input type="number" placeholder="Sets" value={newLift.sets} onChange={(e) => setNewLift({ ...newLift, sets: e.target.value })} className="rounded-xl border border-neutral-200 px-3 py-2 text-sm" /></div><button type="button" onClick={addLift} className="mt-2 rounded-xl bg-neutral-950 px-3 py-2 text-xs font-semibold text-white">Add lift</button></div></div>
+                <SectionCard title="Weight trend" right={<IdeaButton loading={ideasMutation.isPending && ideaResult?.section === "Progress"} onClick={() => askIdeas("Progress", JSON.stringify({ weight }))} />}>
+                  <div className="w-full">
+                    <div style={{ height: 240 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={weight}>
+                          <CartesianGrid stroke="#F5F5F4" vertical={false} />
+                          <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#A3A3A3" }} axisLine={false} tickLine={false} />
+                          <YAxis domain={["auto", "auto"]} tick={{ fontSize: 11, fill: "#A3A3A3" }} axisLine={false} tickLine={false} />
+                          <Tooltip />
+                          <Line type="monotone" dataKey="weight" stroke="#34D399" strokeWidth={2.5} dot={{ r: 4, fill: "#34D399" }} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
                 </SectionCard>
                 <SectionCard title="Eat to recover" right={<IdeaButton loading={ideasMutation.isPending && ideaResult?.section === "Nutrition"} onClick={() => askIdeas("Nutrition", JSON.stringify({ currentWeight, targetWeight, nutritionPlan }))} />}>
                   <div className="mb-4 rounded-2xl bg-amber-50 p-4 text-sm text-amber-950"><p className="font-semibold">Your gain plan</p><p className="mt-1 text-amber-900/75">At {currentWeight} kg toward {targetWeight} kg, start with a modest surplus and adjust from your weekly trend, appetite, and clinician or dietitian advice.</p><div className="mt-3 grid grid-cols-3 gap-2"><div><p className="text-[10px] uppercase tracking-[0.12em] text-amber-900/55">Daily surplus</p><p className="mt-1 font-semibold">+{calorieSurplusTarget} kcal</p></div><div><p className="text-[10px] uppercase tracking-[0.12em] text-amber-900/55">Meal plan</p><p className="mt-1 font-semibold">{nutritionTotals.kcal.toLocaleString()} kcal</p></div><div><p className="text-[10px] uppercase tracking-[0.12em] text-amber-900/55">Protein</p><p className="mt-1 font-semibold">{nutritionTotals.protein} g</p></div></div><p className="mt-2 text-xs text-amber-900/70">A practical pace is about {weeklyGainTarget.toFixed(2)} kg/week. The plan is a starting point, not a prescription.</p></div><div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">{nutritionPlan.map((meal) => <div key={meal.slot} className="rounded-2xl bg-neutral-50 p-4"><p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-400">{meal.slot}</p><p className="mt-2 text-sm font-medium leading-5 text-neutral-800">{meal.meal}</p><p className="mt-2 text-xs text-neutral-500">{meal.cue}</p></div>)}</div><div className="mt-4 grid grid-cols-1 md:grid-cols-[0.6fr_1.8fr_0.6fr_0.6fr_auto] gap-2"><select value={customMeal.slot} onChange={(e) => setCustomMeal({ ...customMeal, slot: e.target.value })} className="rounded-xl border border-neutral-200 px-3 py-2 text-sm"><option>Snack</option><option>Breakfast</option><option>Lunch</option><option>Pre-workout</option><option>Dinner</option><option>Before sleep</option></select><input value={customMeal.meal} onChange={(e) => setCustomMeal({ ...customMeal, meal: e.target.value })} placeholder="Add a meal…" className="rounded-xl border border-neutral-200 px-3 py-2 text-sm" /><input type="number" value={customMeal.kcal} onChange={(e) => setCustomMeal({ ...customMeal, kcal: e.target.value })} placeholder="kcal" className="rounded-xl border border-neutral-200 px-3 py-2 text-sm" /><input type="number" value={customMeal.protein} onChange={(e) => setCustomMeal({ ...customMeal, protein: e.target.value })} placeholder="protein g" className="rounded-xl border border-neutral-200 px-3 py-2 text-sm" /><button type="button" onClick={addCustomMeal} className="rounded-xl bg-neutral-950 px-3 py-2 text-xs font-semibold text-white">Add meal</button></div><p className="mt-4 text-xs text-neutral-400">Favor balanced meals and protein foods; do not rely on chocolate or sugary drinks as the main weight-gain strategy.</p>
@@ -2867,7 +2816,10 @@ export default function PersonalLifeOS() {
             <SubTabs
               tabs={[{ key: "Georgetown", label: "Georgetown" }, { key: "Masters", label: "Masters" }]}
               active={schoolSub}
-              onChange={setSchoolSub}
+              onChange={(nextSub) => {
+                setSchoolSub(nextSub);
+                navigate(nextSub === "Georgetown" ? "/school" : `/school/${nextSub.toLowerCase()}`);
+              }}
             />
 
             {schoolSub === "Georgetown" && (
@@ -2889,7 +2841,9 @@ export default function PersonalLifeOS() {
                     onAddItem={addCourseItem}
                     onAddPerformance={addCoursePerformance}
                     onDeletePerformance={deleteCoursePerformance}
-                    onBack={() => { setSelectedCourseId(coursePageCourse.id); navigate("/?tab=school"); setTab("school"); setSchoolSub("Georgetown"); }}
+                    onBack={() => { setSelectedCourseId(null); navigate("/school"); setTab("school"); setSchoolSub("Georgetown"); }}
+                    todos={todos}
+                    setTodos={setTodos}
                   />
                 ) : (
                   <GeorgetownSubpage
@@ -3045,7 +2999,10 @@ export default function PersonalLifeOS() {
             <SubTabs
               tabs={[{ key: "Family", label: "Family" }, { key: "Friends", label: "Friends" }, { key: "Other", label: "Other" }]}
               active={relationshipsSub}
-              onChange={setRelationshipsSub}
+              onChange={(nextSub) => {
+                setRelationshipsSub(nextSub);
+                navigate(nextSub === "Family" ? "/relationships" : `/relationships/${nextSub.toLowerCase()}`);
+              }}
             />
 
             <SectionCard title={relationshipsSub} right={<IdeaButton loading={ideasMutation.isPending && ideaResult?.section === "Relationships"} onClick={() => askIdeas("Relationships", JSON.stringify({ people }))} />}>

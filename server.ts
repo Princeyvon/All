@@ -63,7 +63,7 @@ app.post("/api/health-ai", async (req, res) => {
   if (ai && promptText) {
     try {
       const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
+        model: "gemini-2.5-flash",
         contents: `You are a supportive health-habit assistant inside a personal dashboard app. The user describes a symptom or condition: "${promptText}".
 Respond ONLY with a raw JSON object in this exact schema:
 {
@@ -108,7 +108,7 @@ app.post("/api/talking-points", async (req, res) => {
   if (ai && promptText) {
     try {
       const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
+        model: "gemini-2.5-flash",
         contents: `You help someone prepare for a warm catch-up conversation. Context: "${promptText}".
 Respond ONLY with a raw JSON object:
 { "points": ["starter 1", "starter 2", "starter 3"] }`,
@@ -158,7 +158,7 @@ Categorize this task or request into:
 Return JSON format: { "title": string, "quadrant": "Q1"|"Q2"|"Q3"|"Q4", "priority": "P1"|"P2"|"P3"|"P4", "domain": string, "coachInsight": string }`;
 
         const response = await ai.models.generateContent({
-          model: "gemini-3.8-flash",
+          model: "gemini-2.5-flash",
           contents: prompt,
         });
 
@@ -218,7 +218,15 @@ Return JSON format: { "title": string, "quadrant": "Q1"|"Q2"|"Q3"|"Q4", "priorit
 // tRPC Router with superjson transformer matching client configuration
 const t = initTRPC.create({ transformer: superjson });
 
+// In-memory state caches
 let savedSnapshot: any = null;
+let calendarEvents: any[] = [];
+let rewindSettings = {
+  enabled: false,
+  eligible: false,
+  completedToday: false,
+  dismissedToday: false,
+};
 
 const appRouter = t.router({
   auth: t.router({
@@ -238,21 +246,37 @@ const appRouter = t.router({
       email: null,
       lastSynced: null,
     })),
-    list: t.procedure.input(z.any().optional()).query(() => []),
+    list: t.procedure.input(z.any().optional()).query(() => calendarEvents),
     sync: t.procedure.input(z.any().optional()).mutation(() => ({
       imported: 0,
       removed: 0,
     })),
-    create: t.procedure.input(z.any().optional()).mutation(() => ({
-      success: true,
-      event: null,
-    })),
-    update: t.procedure.input(z.any().optional()).mutation(() => ({
-      success: true,
-    })),
-    delete: t.procedure.input(z.any().optional()).mutation(() => ({
-      success: true,
-    })),
+    create: t.procedure.input(z.any().optional()).mutation(({ input }) => {
+      const newEvt = {
+        id: `cal-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        ...input,
+      };
+      calendarEvents.push(newEvt);
+      return {
+        success: true,
+        event: newEvt,
+      };
+    }),
+    update: t.procedure.input(z.any().optional()).mutation(({ input }) => {
+      const idx = calendarEvents.findIndex((e) => e.id === input?.id);
+      if (idx !== -1) {
+        calendarEvents[idx] = { ...calendarEvents[idx], ...input };
+      }
+      return {
+        success: true,
+        event: calendarEvents[idx] || input,
+      };
+    }),
+    delete: t.procedure.input(z.any().optional()).mutation(({ input }) => {
+      const idToDelete = input?.id || input;
+      calendarEvents = calendarEvents.filter((e) => e.id !== idToDelete);
+      return { success: true };
+    }),
   }),
   dashboard: t.router({
     load: t.procedure.input(z.any().optional()).query(() => savedSnapshot),
@@ -262,26 +286,72 @@ const appRouter = t.router({
     }),
   }),
   dailyRewind: t.router({
-    status: t.procedure.input(z.any().optional()).query(() => ({
-      enabled: false,
-      eligible: false,
-      completedToday: false,
-      dismissedToday: false,
-    })),
-    setEnabled: t.procedure.input(z.any().optional()).mutation(() => ({ success: true })),
-    dismiss: t.procedure.input(z.any().optional()).mutation(() => ({ success: true })),
-    complete: t.procedure.input(z.any().optional()).mutation(() => ({ success: true })),
+    status: t.procedure.input(z.any().optional()).query(() => rewindSettings),
+    setEnabled: t.procedure.input(z.any().optional()).mutation(({ input }) => {
+      rewindSettings.enabled = Boolean(input?.enabled ?? input);
+      return { success: true, enabled: rewindSettings.enabled };
+    }),
+    dismiss: t.procedure.input(z.any().optional()).mutation(() => {
+      rewindSettings.dismissedToday = true;
+      return { success: true };
+    }),
+    complete: t.procedure.input(z.any().optional()).mutation(() => {
+      rewindSettings.completedToday = true;
+      return { success: true };
+    }),
   }),
   advice: t.router({
-    performance: t.procedure.input(z.any().optional()).mutation(() => ({
-      text: "Prioritize your Georgetown Bank Runs deliverables and maintain steady daily focus blocks.",
-    })),
-    coach: t.procedure.input(z.any().optional()).mutation(() => ({
-      text: "Outstanding progress. Protect your high-leverage Q2 deep work sessions from minor logistical noise.",
-    })),
-    ideas: t.procedure.input(z.any().optional()).mutation(() => ({
-      text: "Consider mapping out your weekly economic problem set milestones early to avoid crunch time.",
-    })),
+    performance: t.procedure.input(z.any().optional()).mutation(async ({ input }) => {
+      const ai = getAI();
+      if (ai) {
+        try {
+          const res = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: `You are an elite productivity mentor. Analyze this user dashboard context and give 2-3 direct, motivating sentences on how to optimize their focus and maintain high momentum today:\n${JSON.stringify(input?.context || "")}`,
+          });
+          if (res.text) return { text: res.text };
+        } catch (e) {
+          console.warn("Gemini advice performance error:", e);
+        }
+      }
+      return {
+        text: "Prioritize your Georgetown Bank Runs deliverables and maintain steady daily focus blocks.",
+      };
+    }),
+    coach: t.procedure.input(z.any().optional()).mutation(async ({ input }) => {
+      const ai = getAI();
+      if (ai) {
+        try {
+          const res = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: `You are an executive personal coach. The user asks: "${input?.message}". Context:\n${JSON.stringify(input?.context || "")}\nProvide a concise, thoughtful, and actionable response (2-3 sentences max).`,
+          });
+          if (res.text) return { text: res.text };
+        } catch (e) {
+          console.warn("Gemini advice coach error:", e);
+        }
+      }
+      return {
+        text: "Outstanding progress. Protect your high-leverage Q2 deep work sessions from minor logistical noise.",
+      };
+    }),
+    ideas: t.procedure.input(z.any().optional()).mutation(async ({ input }) => {
+      const ai = getAI();
+      if (ai) {
+        try {
+          const res = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: `Generate 3 high-impact, practical ideas for "${input?.section}". Context: ${JSON.stringify(input?.context || "")}`,
+          });
+          if (res.text) return { text: res.text };
+        } catch (e) {
+          console.warn("Gemini ideas error:", e);
+        }
+      }
+      return {
+        text: "Consider mapping out your weekly economic problem set milestones early to avoid crunch time.",
+      };
+    }),
     voiceUpdate: t.procedure.input(z.any().optional()).mutation(() => ({
       text: "Voice action processed and synchronized to your priority tracking matrix.",
     })),
@@ -299,7 +369,7 @@ const appRouter = t.router({
       if (ai) {
         try {
           const res = await ai.models.generateContent({
-            model: "gemini-3.8-flash",
+            model: "gemini-2.5-flash",
             contents: lastMsg,
           });
           if (res.text) return res.text;

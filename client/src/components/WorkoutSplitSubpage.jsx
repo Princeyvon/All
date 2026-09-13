@@ -17,8 +17,18 @@ import {
   Flame,
   Clock,
   Sparkles,
-  RotateCcw
+  RotateCcw,
+  Sliders,
+  Edit2,
+  Edit3,
+  Target,
+  Settings2,
 } from "lucide-react";
+import { TargetNumberInput } from "./TargetNumberInput";
+import {
+  WorkoutRoutineEditorModal,
+  formatTimingBadge,
+} from "./WorkoutRoutineEditorModal";
 
 export function WorkoutSplitSubpage({
   split,
@@ -27,6 +37,43 @@ export function WorkoutSplitSubpage({
   onFinishWorkout,
   onSaveExerciseWeight,
 }) {
+  // Local mutable split state with localStorage persistence
+  const [activeSplit, setActiveSplit] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`custom_workout_split_${split.id}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return { ...split, ...parsed };
+      }
+    } catch (e) {}
+    return split;
+  });
+
+  // Modal edit states
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editModalTab, setEditModalTab] = useState("timings"); // "timings" | "routine"
+
+  // Handle saving customized split
+  const handleSaveCustomSplit = (updated) => {
+    setActiveSplit(updated);
+    try {
+      localStorage.setItem(
+        `custom_workout_split_${split.id}`,
+        JSON.stringify(updated)
+      );
+    } catch (e) {}
+    setShowEditModal(false);
+  };
+
+  // Reset to original split defaults
+  const handleResetSplitDefaults = () => {
+    try {
+      localStorage.removeItem(`custom_workout_split_${split.id}`);
+    } catch (e) {}
+    setActiveSplit(split);
+    setShowEditModal(false);
+  };
+
   // Find previous weight for an exercise from liftLog
   function getPreviousWeight(exerciseName) {
     const history = liftLog
@@ -41,12 +88,26 @@ export function WorkoutSplitSubpage({
   // State: weights logged for each exercise for this session
   const [exerciseWeights, setExerciseWeights] = useState(() => {
     const initial = {};
-    split.exercises.forEach((ex) => {
+    activeSplit.exercises.forEach((ex) => {
       const prev = getPreviousWeight(ex.name);
       initial[ex.id] = prev !== null ? prev : ex.defaultLoad;
     });
     return initial;
   });
+
+  // Keep weights updated if new exercises are added
+  useEffect(() => {
+    setExerciseWeights((prev) => {
+      const updated = { ...prev };
+      activeSplit.exercises.forEach((ex) => {
+        if (updated[ex.id] === undefined) {
+          const prevWeight = getPreviousWeight(ex.name);
+          updated[ex.id] = prevWeight !== null ? prevWeight : ex.defaultLoad;
+        }
+      });
+      return updated;
+    });
+  }, [activeSplit.exercises]);
 
   // Sound enabled toggle
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -85,45 +146,45 @@ export function WorkoutSplitSubpage({
     }
   }
 
-  // Build timeline steps
+  // Build timeline steps dynamically from activeSplit
   const steps = useMemo(() => {
     const arr = [];
     arr.push({
       type: "warmup",
-      duration: split.warmupSec || 300,
+      duration: activeSplit.warmupSec || 300,
       label: "Warm-up",
-      cue: split.warmupCue || "Arm circles, band pull-aparts, light cardio",
+      cue: activeSplit.warmupCue || "Arm circles, band pull-aparts, light cardio",
     });
 
-    split.exercises.forEach((ex, exIdx) => {
-      for (let s = 0; s < split.setsPerExercise; s++) {
+    activeSplit.exercises.forEach((ex, exIdx) => {
+      for (let s = 0; s < activeSplit.setsPerExercise; s++) {
         arr.push({
           type: "work",
           exIdx,
           setIdx: s,
-          duration: split.workSec,
+          duration: activeSplit.workSec,
           label: ex.name,
           cue: ex.cue,
           exercise: ex,
         });
-        if (s < split.setsPerExercise - 1) {
+        if (s < activeSplit.setsPerExercise - 1) {
           arr.push({
             type: "rest",
             exIdx,
             setIdx: s,
-            duration: split.restBetweenSets,
+            duration: activeSplit.restBetweenSets,
             label: ex.name,
             cue: "Catch your breath, shake it out, prepare for the next set",
             exercise: ex,
           });
         }
       }
-      if (exIdx < split.exercises.length - 1) {
-        const nextEx = split.exercises[exIdx + 1];
+      if (exIdx < activeSplit.exercises.length - 1) {
+        const nextEx = activeSplit.exercises[exIdx + 1];
         arr.push({
           type: "restEx",
           exIdx,
-          duration: split.restBetweenExercises,
+          duration: activeSplit.restBetweenExercises,
           label: "Rest & Transition",
           cue: `Set up for: ${nextEx.name}`,
           nextName: nextEx.name,
@@ -134,13 +195,19 @@ export function WorkoutSplitSubpage({
 
     arr.push({
       type: "cooldown",
-      duration: split.cooldownSec || 180,
+      duration: activeSplit.cooldownSec || 180,
       label: "Cool-down",
-      cue: split.cooldownCue || "Full stretch, deep breathing, lower heart rate",
+      cue: activeSplit.cooldownCue || "Full stretch, deep breathing, lower heart rate",
     });
 
     return arr;
-  }, [split]);
+  }, [activeSplit]);
+
+  // Dynamically computed total duration in minutes
+  const totalEstimatedMinutes = useMemo(() => {
+    const totalSec = steps.reduce((sum, s) => sum + (s.duration || 0), 0);
+    return Math.round(totalSec / 60);
+  }, [steps]);
 
   // Screen modes: "start" | "workout" | "finish"
   const [screen, setScreen] = useState("start");
@@ -227,22 +294,22 @@ export function WorkoutSplitSubpage({
     setTimeout(() => playBeep(1040, 0.35, 0.25), 360);
 
     // Prepare lifts for saving
-    const logsToSave = split.exercises.map((ex) => ({
+    const logsToSave = activeSplit.exercises.map((ex) => ({
       id: Date.now() + Math.random(),
       exercise: ex.name,
       load: Number(exerciseWeights[ex.id] ?? ex.defaultLoad),
       unit: "kg",
       reps: 10,
-      sets: split.setsPerExercise,
-      note: `${split.title} session`,
+      sets: activeSplit.setsPerExercise,
+      note: `${activeSplit.title} session`,
     }));
 
     if (onFinishWorkout) {
-      const minutes = Math.round(elapsedTotalMs / 60000) || split.estimatedMin;
+      const minutes = Math.round(elapsedTotalMs / 60000) || totalEstimatedMinutes;
       onFinishWorkout({
-        title: split.title,
+        title: activeSplit.title,
         duration: `${minutes} min`,
-        exercisesCompleted: split.exercises.length,
+        exercisesCompleted: activeSplit.exercises.length,
         setsCompleted: completedSets + 1,
         lifts: logsToSave,
       });
@@ -288,16 +355,19 @@ export function WorkoutSplitSubpage({
     setExerciseWeights((prev) => {
       const curr = Number(prev[exId] || 0);
       const updated = Math.max(0, Math.round((curr + delta) * 10) / 10);
+      onSaveExerciseWeight?.(exId, updated);
       return { ...prev, [exId]: updated };
     });
   }
 
   function setDirectWeight(exId, value) {
     const num = parseFloat(value);
+    const valid = isNaN(num) ? 0 : Math.max(0, num);
     setExerciseWeights((prev) => ({
       ...prev,
-      [exId]: isNaN(num) ? "" : Math.max(0, num),
+      [exId]: valid,
     }));
+    onSaveExerciseWeight?.(exId, valid);
   }
 
   function formatTime(ms) {
@@ -326,17 +396,18 @@ export function WorkoutSplitSubpage({
 
   // Segment index
   function getSegmentIndex(step) {
+    if (!step) return 0;
     if (step.type === "warmup") return 0;
-    if (step.type === "cooldown") return split.exercises.length + 1;
+    if (step.type === "cooldown") return activeSplit.exercises.length + 1;
     return 1 + (step.exIdx || 0);
   }
-  const totalSegments = split.exercises.length + 2;
+  const totalSegments = activeSplit.exercises.length + 2;
   const currentSegIdx = getSegmentIndex(currentStep);
 
   return (
-    <div className="fixed inset-0 z-50 bg-stone-950/75 backdrop-blur-sm flex items-center justify-center sm:p-4 p-0 animate-in fade-in duration-200">
-      {/* Container card: fixed height bounds so header & footer stay pinned, zero overlapping */}
-      <div className="w-full max-w-2xl h-full sm:h-[92vh] sm:max-h-[860px] bg-[#16171E] text-stone-100 sm:rounded-3xl border sm:border-stone-800 shadow-2xl flex flex-col overflow-hidden relative">
+    <div className="fixed inset-0 z-50 bg-[#16171E] text-stone-100 flex flex-col sm:bg-stone-950/80 sm:backdrop-blur-sm sm:flex sm:items-center sm:justify-center sm:p-4 animate-in fade-in duration-200">
+      {/* Container: on mobile acts as a full native page with zero modal framing */}
+      <div className="w-full max-w-2xl h-full sm:h-[92vh] sm:max-h-[860px] bg-[#16171E] text-stone-100 rounded-none sm:rounded-3xl border-0 sm:border sm:border-stone-800 shadow-none sm:shadow-2xl flex flex-col overflow-hidden relative">
 
         {/* =========================================================================
             SCREEN 1: OVERVIEW & EXERCISE WEIGHT LOGGING
@@ -344,91 +415,109 @@ export function WorkoutSplitSubpage({
         {screen === "start" && (
           <>
             {/* Pinned Top Navigation */}
-            <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-stone-800/80 bg-[#16171E] shrink-0">
+            <div className="flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3.5 border-b border-stone-800/80 bg-[#16171E] shrink-0 sticky top-0 z-10">
               <button
                 type="button"
                 onClick={onClose}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-stone-400 hover:text-white transition-colors py-1.5 px-2.5 rounded-xl hover:bg-stone-800"
+                className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-stone-300 hover:text-white transition-colors py-1.5 px-2.5 rounded-xl hover:bg-stone-800 active:scale-95 cursor-pointer"
               >
-                <ArrowLeft size={15} /> Back
+                <ArrowLeft size={16} /> <span>Workouts</span>
               </button>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                {/* Edit Routine & Timings Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditModalTab("timings");
+                    setShowEditModal(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-stone-800/90 hover:bg-stone-700 text-stone-200 hover:text-white text-xs font-bold border border-stone-700 transition-all cursor-pointer shadow-sm active:scale-95"
+                >
+                  <Sliders size={13} className="text-teal-400" />
+                  <span className="hidden sm:inline">Edit Routine & Timings</span>
+                  <span className="sm:hidden">Edit</span>
+                </button>
+
                 <span
-                  className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border"
+                  className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider px-2 sm:px-2.5 py-0.5 rounded-full border"
                   style={{
-                    backgroundColor: split.bgTint,
-                    borderColor: split.borderTint,
-                    color: split.color,
+                    backgroundColor: activeSplit.bgTint || "#2DD4BF20",
+                    borderColor: activeSplit.borderTint || "#2DD4BF40",
+                    color: activeSplit.color || "#2DD4BF",
                   }}
                 >
-                  {split.badge}
+                  {activeSplit.badge}
                 </span>
 
                 <button
                   type="button"
                   onClick={() => setSoundEnabled(!soundEnabled)}
                   title={soundEnabled ? "Mute sounds" : "Enable sounds"}
-                  className="p-1.5 rounded-xl text-stone-400 hover:text-white hover:bg-stone-800 transition-colors"
+                  className="p-1.5 rounded-xl text-stone-400 hover:text-white hover:bg-stone-800 transition-colors cursor-pointer"
                 >
                   {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onClose}
-                  aria-label="Close modal"
-                  className="p-1.5 rounded-xl text-stone-400 hover:text-white hover:bg-stone-800 transition-colors"
-                >
-                  <X size={16} />
                 </button>
               </div>
             </div>
 
             {/* Scrollable Main Body */}
-            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4">
+            <div className="flex-1 overflow-y-auto px-3.5 sm:px-6 py-3.5 sm:py-4 space-y-3.5 sm:space-y-4">
               {/* Header Details */}
               <div className="pb-3 border-b border-stone-800/60">
-                <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-                  {split.title}
+                <h1 className="text-xl sm:text-3xl font-black tracking-tight text-white">
+                  {activeSplit.title}
                 </h1>
                 <p className="text-xs sm:text-sm text-stone-400 mt-0.5">
-                  {split.subtitle} · <span className="text-stone-300 font-medium">{split.focus}</span>
+                  {activeSplit.subtitle} · <span className="text-stone-300 font-medium">{activeSplit.focus}</span>
                 </p>
 
                 {/* Meta Highlights Row */}
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-stone-400 mt-2.5">
                   <span>
-                    <strong className="text-white font-bold">{split.exercises.length}</strong> exercises
+                    <strong className="text-white font-bold">{activeSplit.exercises.length}</strong> exercises
                   </span>
                   <span>•</span>
                   <span>
-                    <strong className="text-white font-bold">{split.setsPerExercise}</strong> sets each
+                    <strong className="text-white font-bold">{activeSplit.setsPerExercise}</strong> sets each
                   </span>
                   <span>•</span>
                   <span>
-                    ~<strong className="text-white font-bold">{split.estimatedMin}</strong> min total
+                    ~<strong className="text-white font-bold">{totalEstimatedMinutes}</strong> min total
                   </span>
                   <span>•</span>
                   <span className="text-teal-400 font-semibold">
-                    66s work / 60s rest
+                    {activeSplit.workSec}s work / {activeSplit.restBetweenSets}s rest
                   </span>
                 </div>
 
-                {/* Phase interval legend */}
-                <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-stone-800/40 text-[11px] text-stone-300">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-stone-900 border border-stone-800">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#A78BFA]" /> Warm-up (5m)
-                  </span>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-stone-900 border border-stone-800">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#FF5C3E]" /> Work (66s)
-                  </span>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-stone-900 border border-stone-800">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#2DD4BF]" /> Rest (60s)
-                  </span>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-stone-900 border border-stone-800">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#FBBF24]" /> Cool-down (3m)
-                  </span>
+                {/* Phase interval legend with direct Edit Timings CTA */}
+                <div className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-3 border-t border-stone-800/40 text-[11px] text-stone-300">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-stone-900 border border-stone-800">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#A78BFA]" /> Warm-up ({formatTimingBadge(activeSplit.warmupSec || 300)})
+                    </span>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-stone-900 border border-stone-800">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#FF5C3E]" /> Work ({formatTimingBadge(activeSplit.workSec || 66)})
+                    </span>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-stone-900 border border-stone-800">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#2DD4BF]" /> Rest ({formatTimingBadge(activeSplit.restBetweenSets || 60)})
+                    </span>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-stone-900 border border-stone-800">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#FBBF24]" /> Cool-down ({formatTimingBadge(activeSplit.cooldownSec || 180)})
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditModalTab("timings");
+                      setShowEditModal(true);
+                    }}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-stone-800/90 hover:bg-stone-700 text-teal-300 hover:text-white border border-stone-700/80 text-[11px] font-bold transition-all cursor-pointer shadow-sm"
+                  >
+                    <Edit3 size={11} /> Edit Timings
+                  </button>
                 </div>
               </div>
 
@@ -442,11 +531,23 @@ export function WorkoutSplitSubpage({
                     Set your weights before starting. They will be saved to your lift history when done.
                   </p>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditModalTab("routine");
+                    setShowEditModal(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 hover:text-white text-xs font-semibold border border-stone-700 transition-colors cursor-pointer"
+                >
+                  <Edit2 size={12} className="text-teal-400" />
+                  <span>Edit Routine</span>
+                </button>
               </div>
 
               {/* Exercises List */}
               <div className="space-y-3">
-                {split.exercises.map((ex, i) => {
+                {activeSplit.exercises.map((ex, i) => {
                   const prevWeight = getPreviousWeight(ex.name);
                   const currentWeight = exerciseWeights[ex.id] ?? ex.defaultLoad;
                   const hasPrev = prevWeight !== null;
@@ -466,6 +567,17 @@ export function WorkoutSplitSubpage({
                           <h3 className="text-sm font-bold text-white tracking-tight truncate">
                             {ex.name}
                           </h3>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditModalTab("routine");
+                              setShowEditModal(true);
+                            }}
+                            title="Edit exercise in routine editor"
+                            className="p-1 rounded-lg text-stone-400 hover:text-teal-300 hover:bg-stone-800 transition-colors cursor-pointer shrink-0"
+                          >
+                            <Edit2 size={12} />
+                          </button>
                         </div>
                         <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-stone-800 text-teal-300 border border-stone-700 shrink-0">
                           {ex.muscle}
@@ -477,8 +589,8 @@ export function WorkoutSplitSubpage({
                         {ex.cue}
                       </p>
 
-                      {/* Bottom Weight & Progress Controls: clean non-overlapping row */}
-                      <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-2 pt-2 border-t border-stone-800/80 bg-stone-900/40 -mx-3.5 -mb-3.5 px-3.5 py-2 rounded-b-2xl">
+                      {/* Bottom Weight & Progress Controls: clean non-overlapping row with custom TargetNumberInput */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2.5 border-t border-stone-800/80 bg-stone-900/40 -mx-3.5 -mb-3.5 px-3.5 py-2.5 rounded-b-2xl">
                         {/* Previous weight & delta pill */}
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="text-xs text-stone-400 shrink-0">
@@ -508,38 +620,20 @@ export function WorkoutSplitSubpage({
                           )}
                         </div>
 
-                        {/* Stepper with explicit sizes */}
-                        <div className="flex items-center gap-1.5 self-end xs:self-auto">
-                          <span className="text-[11px] text-stone-400 mr-1 hidden sm:inline">Target:</span>
-                          <button
-                            type="button"
-                            onClick={() => updateWeight(ex.id, -2.5)}
-                            aria-label={`Decrease weight for ${ex.name}`}
-                            className="w-7 h-7 rounded-lg bg-stone-800 border border-stone-700 hover:bg-stone-700 text-white flex items-center justify-center transition-colors active:scale-95 cursor-pointer"
-                          >
-                            <Minus size={12} />
-                          </button>
-
-                          <div className="flex items-center bg-stone-950 border border-stone-700 rounded-lg px-2 h-7">
-                            <input
-                              type="number"
-                              step="0.5"
-                              min="0"
-                              value={currentWeight === "" ? "" : currentWeight}
-                              onChange={(e) => setDirectWeight(ex.id, e.target.value)}
-                              className="w-12 text-center font-bold text-xs bg-transparent text-white tabular-nums focus:outline-none"
-                            />
-                            <span className="text-[10px] font-semibold text-stone-400">kg</span>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => updateWeight(ex.id, 2.5)}
-                            aria-label={`Increase weight for ${ex.name}`}
-                            className="w-7 h-7 rounded-lg bg-stone-800 border border-stone-700 hover:bg-stone-700 text-white flex items-center justify-center transition-colors active:scale-95 cursor-pointer"
-                          >
-                            <Plus size={12} />
-                          </button>
+                        {/* Custom-designed Target Number Input with NO spinner flows */}
+                        <div className="flex items-center gap-2 self-end sm:self-auto">
+                          <span className="text-[11px] font-semibold text-stone-400 hidden xs:inline">
+                            Target:
+                          </span>
+                          <TargetNumberInput
+                            value={currentWeight}
+                            onChange={(val) => setDirectWeight(ex.id, val)}
+                            exerciseName={ex.name}
+                            step={2.5}
+                            unit="kg"
+                            size="md"
+                            showQuickPills={true}
+                          />
                         </div>
                       </div>
                     </div>
@@ -549,13 +643,13 @@ export function WorkoutSplitSubpage({
             </div>
 
             {/* Pinned Bottom CTA Footer */}
-            <div className="p-4 sm:p-5 border-t border-stone-800 bg-[#16171E] shrink-0">
+            <div className="p-3 sm:p-5 border-t border-stone-800 bg-[#16171E] shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
               <button
                 type="button"
                 onClick={startWorkout}
-                className="w-full py-3.5 sm:py-4 rounded-2xl bg-[#FF5C3E] text-[#11120F] hover:brightness-110 active:scale-[0.99] font-extrabold text-sm sm:text-base tracking-wide flex items-center justify-center gap-2 shadow-lg shadow-[#FF5C3E]/20 transition-all cursor-pointer"
+                className="w-full py-3 sm:py-3.5 rounded-xl sm:rounded-2xl bg-[#FF5C3E] text-[#11120F] hover:brightness-110 active:scale-[0.99] font-extrabold text-sm sm:text-base tracking-wide flex items-center justify-center gap-2 shadow-lg shadow-[#FF5C3E]/20 transition-all cursor-pointer"
               >
-                <Play size={18} fill="#11120F" /> Start 56-Min Workout
+                <Play size={17} fill="#11120F" /> Start {totalEstimatedMinutes}-Min Workout
               </button>
             </div>
           </>
@@ -583,7 +677,7 @@ export function WorkoutSplitSubpage({
                     {currentStep.type === "cooldown" && "Cool-down Phase"}
                     {(currentStep.type === "work" || currentStep.type === "rest") && (
                       <>
-                        Ex {(currentStep.exIdx || 0) + 1}/{split.exercises.length} · Set {(currentStep.setIdx || 0) + 1}/{split.setsPerExercise}
+                        Ex {(currentStep.exIdx || 0) + 1}/{activeSplit.exercises.length} · Set {(currentStep.setIdx || 0) + 1}/{activeSplit.setsPerExercise}
                       </>
                     )}
                     {currentStep.type === "restEx" && "Next Exercise Transition"}
@@ -816,7 +910,7 @@ export function WorkoutSplitSubpage({
               </div>
 
               <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                {split.title} Done!
+                {activeSplit.title} Done!
               </h2>
               <p className="text-stone-400 text-xs mt-1 max-w-sm">
                 Every set completed. Weights and volume have been recorded directly to your dashboard.
@@ -834,7 +928,7 @@ export function WorkoutSplitSubpage({
                 </div>
                 <div className="bg-stone-900 border border-stone-800 p-3.5 rounded-2xl text-center">
                   <span className="text-xl font-black text-teal-400 font-mono tabular-nums">
-                    {split.exercises.length * split.setsPerExercise}
+                    {activeSplit.exercises.length * activeSplit.setsPerExercise}
                   </span>
                   <span className="block text-[10.5px] font-semibold text-stone-400 uppercase tracking-wider mt-0.5">
                     Sets Logged
@@ -848,7 +942,7 @@ export function WorkoutSplitSubpage({
                   Recorded Exercise Weights
                 </h4>
                 <div className="bg-stone-900 border border-stone-800 rounded-2xl divide-y divide-stone-800 overflow-hidden">
-                  {split.exercises.map((ex) => {
+                  {activeSplit.exercises.map((ex) => {
                     const logged = exerciseWeights[ex.id] ?? ex.defaultLoad;
                     const prev = getPreviousWeight(ex.name);
                     const diff = prev !== null ? logged - prev : null;
@@ -888,13 +982,13 @@ export function WorkoutSplitSubpage({
             </div>
 
             {/* Pinned Bottom Buttons */}
-            <div className="p-4 sm:p-5 border-t border-stone-800 bg-[#16171E] shrink-0 flex flex-col gap-2">
+            <div className="p-3 sm:p-5 border-t border-stone-800 bg-[#16171E] shrink-0 flex flex-col gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
               <button
                 type="button"
                 onClick={onClose}
-                className="w-full py-3.5 rounded-2xl bg-teal-400 text-[#11120F] font-bold text-sm hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer shadow-lg shadow-teal-400/20"
+                className="w-full py-3 sm:py-3.5 rounded-xl sm:rounded-2xl bg-teal-400 text-[#11120F] font-bold text-sm hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer shadow-lg shadow-teal-400/20"
               >
-                Done & Return to Fitness
+                Done & Return to Workouts
               </button>
               <button
                 type="button"
@@ -909,6 +1003,17 @@ export function WorkoutSplitSubpage({
               </button>
             </div>
           </div>
+        )}
+
+        {/* Modal: Customize Routine & Timings */}
+        {showEditModal && (
+          <WorkoutRoutineEditorModal
+            split={activeSplit}
+            initialTab={editModalTab}
+            onSave={handleSaveCustomSplit}
+            onClose={() => setShowEditModal(false)}
+            onResetDefaults={handleResetSplitDefaults}
+          />
         )}
       </div>
     </div>

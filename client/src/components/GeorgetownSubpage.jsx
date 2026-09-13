@@ -351,7 +351,7 @@ export function GeorgetownSubpage({
   );
 
   return (
-    <div className="w-full max-w-2xl mx-auto flex flex-col gap-6 font-sans text-stone-900 pb-12">
+    <div className="w-full max-w-2xl mx-auto flex flex-col gap-6 font-sans text-stone-900 pb-12 min-w-0 overflow-x-hidden">
       {/* =========================================================================
           SECTION 1: TOP GREETING & ENCOURAGING QUOTE (MATCHING IMAGE 1)
           ========================================================================= */}
@@ -631,10 +631,14 @@ export function GeorgetownSubpage({
 
                     <div className="flex-1 min-w-0">
                       {/* Course tag with teal border indicator */}
-                      <div className="flex items-center gap-1.5 text-xs font-semibold text-teal-700">
+                      <button
+                        type="button"
+                        onClick={() => onOpenCourse?.(item.courseId)}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-teal-700 hover:text-teal-900 transition-colors text-left"
+                      >
                         <span className="w-0.5 h-3 bg-teal-600 rounded-full" />
                         <span className="truncate">{item.courseName}</span>
-                      </div>
+                      </button>
 
                       {/* Title */}
                       <h4 className="text-sm font-bold text-stone-900 mt-0.5">
@@ -691,10 +695,14 @@ export function GeorgetownSubpage({
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 text-xs font-semibold text-[#8E1763]">
+                      <button
+                        type="button"
+                        onClick={() => onOpenCourse?.(item.courseId)}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-[#8E1763] hover:text-[#5c0f40] transition-colors text-left"
+                      >
                         <span className="w-0.5 h-3 bg-[#8E1763] rounded-full" />
                         <span className="truncate">{item.courseName}</span>
-                      </div>
+                      </button>
 
                       <h4 className="text-sm font-bold text-stone-900 mt-0.5">
                         {item.title}
@@ -748,10 +756,14 @@ export function GeorgetownSubpage({
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700">
+                      <button
+                        type="button"
+                        onClick={() => onOpenCourse?.(item.courseId)}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-900 transition-colors text-left"
+                      >
                         <span className="w-0.5 h-3 bg-emerald-600 rounded-full" />
                         <span className="truncate">{item.courseName}</span>
-                      </div>
+                      </button>
 
                       <h4 className="text-sm font-bold text-stone-900 mt-0.5">
                         {item.title}

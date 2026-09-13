@@ -11,7 +11,9 @@ import {
   Sparkles,
   Award,
   Calendar,
-  Layers
+  Layers,
+  Sliders,
+  Edit3,
 } from "lucide-react";
 import { WORKOUT_SPLITS } from "./workoutData";
 import { WorkoutSplitSubpage } from "./WorkoutSplitSubpage";
@@ -26,6 +28,7 @@ export function WorkoutsHub({
   workouts = [],
   liftLog = [],
   onFinishWorkoutSession,
+  onSaveExerciseWeight,
 }) {
   const [activeSplitId, setActiveSplitId] = useState(null);
   const [filter, setFilter] = useState("all");
@@ -64,16 +67,36 @@ export function WorkoutsHub({
     return found ? found.date : null;
   }
 
+  // If a split is selected, open it as a full dedicated page!
+  if (activeSplit) {
+    return (
+      <div className="workout-split-page-view w-full animate-in fade-in duration-200">
+        <WorkoutSplitSubpage
+          split={activeSplit}
+          liftLog={liftLog}
+          onClose={() => setActiveSplitId(null)}
+          onFinishWorkout={(summary) => {
+            if (onFinishWorkoutSession) {
+              onFinishWorkoutSession(summary);
+            }
+            setActiveSplitId(null);
+          }}
+          onSaveExerciseWeight={onSaveExerciseWeight}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4 sm:gap-6">
       {/* =========================================================================
           1. LOG YOUR WEIGHT TODAY
           ========================================================================= */}
-      <div className="bg-[#FFFEFA] border border-stone-200/90 rounded-3xl p-5 sm:p-6 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-stone-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
-              <Scale size={20} />
+      <div className="bg-[#FFFEFA] border border-stone-200/90 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 md:p-6 shadow-xs sm:shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-3 sm:pb-4 border-b border-stone-100">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+              <Scale size={18} />
             </div>
             <div>
               <h3 className="text-lg font-bold text-[#11120F] tracking-tight">
@@ -279,13 +302,37 @@ export function WorkoutsHub({
                       </span>
                     )}
                   </div>
+
+                  {/* Timing Intervals Bar */}
+                  <div className="flex flex-wrap items-center gap-1 text-[10px] text-stone-500 pt-0.5">
+                    <span className="px-2 py-0.5 rounded-md bg-stone-100 font-medium">
+                      Warm-up (5m)
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-orange-50 text-orange-700 font-medium">
+                      Work (66s)
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-teal-50 text-teal-700 font-medium">
+                      Rest (60s)
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 font-medium">
+                      Cool-down (3m)
+                    </span>
+                  </div>
                 </div>
 
                 {/* Card Action Button: Single prominent button preventing overlaps */}
                 <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between gap-2">
-                  <span className="text-[11.5px] font-semibold text-[#5F625D] group-hover:text-[#2F745C] transition-colors flex items-center gap-1">
-                    Preview & Setup <ChevronRight size={13} />
-                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveSplitId(split.id);
+                    }}
+                    className="text-[11.5px] font-semibold text-stone-600 hover:text-[#2F745C] transition-colors flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-stone-100"
+                  >
+                    <Sliders size={12} className="text-[#2F745C]" />
+                    <span>Edit Routine & Timings</span>
+                  </button>
 
                   <button
                     type="button"
@@ -304,23 +351,6 @@ export function WorkoutsHub({
           })}
         </div>
       </div>
-
-      {/* =========================================================================
-          3. FULL WORKOUT SUBPAGE MODAL / VIEW
-          ========================================================================= */}
-      {activeSplit && (
-        <WorkoutSplitSubpage
-          split={activeSplit}
-          liftLog={liftLog}
-          onClose={() => setActiveSplitId(null)}
-          onFinishWorkout={(summary) => {
-            if (onFinishWorkoutSession) {
-              onFinishWorkoutSession(summary);
-            }
-            setActiveSplitId(null);
-          }}
-        />
-      )}
     </div>
   );
 }

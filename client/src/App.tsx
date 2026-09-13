@@ -7,14 +7,37 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home.jsx";
 
 function Router() {
-  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
-      <Route path={"/school/georgetown/:courseId"} component={Home} />
-      <Route path={"/"} component={Home} />
-      <Route path={"/404"} component={NotFound} />
+      <Route path="/school/georgetown/:courseId" component={Home} />
+      <Route path="/school/georgetown" component={Home} />
+      <Route path="/school/masters" component={Home} />
+      <Route path="/school" component={Home} />
+      <Route path="/health/fitness" component={Home} />
+      <Route path="/health/sleep" component={Home} />
+      <Route path="/health/disease" component={Home} />
+      <Route path="/health" component={Home} />
+      <Route path="/workouts" component={Home} />
+      <Route path="/fitness" component={Home} />
+      <Route path="/finance/insights" component={Home} />
+      <Route path="/finance/income" component={Home} />
+      <Route path="/finance/debts" component={Home} />
+      <Route path="/finance" component={Home} />
+      <Route path="/work" component={Home} />
+      <Route path="/relationships/family" component={Home} />
+      <Route path="/relationships/friends" component={Home} />
+      <Route path="/relationships/other" component={Home} />
+      <Route path="/relationships" component={Home} />
+      <Route path="/people" component={Home} />
+      <Route path="/calendar" component={Home} />
+      <Route path="/today" component={Home} />
+      <Route path="/matrix" component={Home} />
+      <Route path="/eisenhower" component={Home} />
+      <Route path="/dashboard" component={Home} />
+      <Route path="/" component={Home} />
+      <Route path="/404" component={NotFound} />
       {/* Final fallback route */}
-      <Route component={NotFound} />
+      <Route component={Home} />
     </Switch>
   );
 }
